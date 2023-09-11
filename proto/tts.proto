@@ -1,0 +1,15 @@
+syntax = "proto3";
+package AiService;
+
+service Tts {
+	rpc SpeakStream (TtsSpeakRequest) returns (stream TtsSpeakResponse);
+}
+
+message TtsSpeakRequest {
+	string text = 1;
+}
+
+message TtsSpeakResponse {
+	bytes audio = 1;
+}
+

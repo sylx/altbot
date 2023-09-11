@@ -1,0 +1,16 @@
+syntax = "proto3";
+package AiService;
+
+service Transcription {
+	rpc TranscriptionBiStreams (stream VoiceAudio) returns (stream transcribedText);
+}
+
+message VoiceAudio {
+	bytes audio = 1;
+}
+
+message transcribedText {
+	int64 begin = 1;
+	int64 end = 2;
+	string text = 3;
+}
