@@ -6,11 +6,13 @@ service Transcription {
 }
 
 message VoiceAudio {
-	bytes audio = 1;
+	string speaker_id = 1;
+	bytes audio = 2;
 }
 
 message transcribedText {
 	int64 begin = 1;
 	int64 end = 2;
-	string text = 3;
+	string speaker_id = 3;
+	string text = 4;
 }

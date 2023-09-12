@@ -97,6 +97,7 @@ proto.AiService.VoiceAudio.prototype.toObject = function(opt_includeInstance) {
  */
 proto.AiService.VoiceAudio.toObject = function(includeInstance, msg) {
   var f, obj = {
+    speakerId: jspb.Message.getFieldWithDefault(msg, 1, ""),
     audio: msg.getAudio_asB64()
   };
 
@@ -135,6 +136,10 @@ proto.AiService.VoiceAudio.deserializeBinaryFromReader = function(msg, reader) {
     var field = reader.getFieldNumber();
     switch (field) {
     case 1:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setSpeakerId(value);
+      break;
+    case 2:
       var value = /** @type {!Uint8Array} */ (reader.readBytes());
       msg.setAudio(value);
       break;
@@ -167,10 +172,17 @@ proto.AiService.VoiceAudio.prototype.serializeBinary = function() {
  */
 proto.AiService.VoiceAudio.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
+  f = message.getSpeakerId();
+  if (f.length > 0) {
+    writer.writeString(
+      1,
+      f
+    );
+  }
   f = message.getAudio_asU8();
   if (f.length > 0) {
     writer.writeBytes(
-      1,
+      2,
       f
     );
   }
@@ -178,16 +190,34 @@ proto.AiService.VoiceAudio.serializeBinaryToWriter = function(message, writer) {
 
 
 /**
- * optional bytes audio = 1;
- * @return {!(string|Uint8Array)}
+ * optional string speaker_id = 1;
+ * @return {string}
  */
-proto.AiService.VoiceAudio.prototype.getAudio = function() {
-  return /** @type {!(string|Uint8Array)} */ (jspb.Message.getFieldWithDefault(this, 1, ""));
+proto.AiService.VoiceAudio.prototype.getSpeakerId = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 1, ""));
 };
 
 
 /**
- * optional bytes audio = 1;
+ * @param {string} value
+ * @return {!proto.AiService.VoiceAudio} returns this
+ */
+proto.AiService.VoiceAudio.prototype.setSpeakerId = function(value) {
+  return jspb.Message.setProto3StringField(this, 1, value);
+};
+
+
+/**
+ * optional bytes audio = 2;
+ * @return {!(string|Uint8Array)}
+ */
+proto.AiService.VoiceAudio.prototype.getAudio = function() {
+  return /** @type {!(string|Uint8Array)} */ (jspb.Message.getFieldWithDefault(this, 2, ""));
+};
+
+
+/**
+ * optional bytes audio = 2;
  * This is a type-conversion wrapper around `getAudio()`
  * @return {string}
  */
@@ -198,7 +228,7 @@ proto.AiService.VoiceAudio.prototype.getAudio_asB64 = function() {
 
 
 /**
- * optional bytes audio = 1;
+ * optional bytes audio = 2;
  * Note that Uint8Array is not supported on all browsers.
  * @see http://caniuse.com/Uint8Array
  * This is a type-conversion wrapper around `getAudio()`
@@ -215,7 +245,7 @@ proto.AiService.VoiceAudio.prototype.getAudio_asU8 = function() {
  * @return {!proto.AiService.VoiceAudio} returns this
  */
 proto.AiService.VoiceAudio.prototype.setAudio = function(value) {
-  return jspb.Message.setProto3BytesField(this, 1, value);
+  return jspb.Message.setProto3BytesField(this, 2, value);
 };
 
 
@@ -253,7 +283,8 @@ proto.AiService.transcribedText.toObject = function(includeInstance, msg) {
   var f, obj = {
     begin: jspb.Message.getFieldWithDefault(msg, 1, 0),
     end: jspb.Message.getFieldWithDefault(msg, 2, 0),
-    text: jspb.Message.getFieldWithDefault(msg, 3, "")
+    speakerId: jspb.Message.getFieldWithDefault(msg, 3, ""),
+    text: jspb.Message.getFieldWithDefault(msg, 4, "")
   };
 
   if (includeInstance) {
@@ -300,6 +331,10 @@ proto.AiService.transcribedText.deserializeBinaryFromReader = function(msg, read
       break;
     case 3:
       var value = /** @type {string} */ (reader.readString());
+      msg.setSpeakerId(value);
+      break;
+    case 4:
+      var value = /** @type {string} */ (reader.readString());
       msg.setText(value);
       break;
     default:
@@ -345,10 +380,17 @@ proto.AiService.transcribedText.serializeBinaryToWriter = function(message, writ
       f
     );
   }
-  f = message.getText();
+  f = message.getSpeakerId();
   if (f.length > 0) {
     writer.writeString(
       3,
+      f
+    );
+  }
+  f = message.getText();
+  if (f.length > 0) {
+    writer.writeString(
+      4,
       f
     );
   }
@@ -392,10 +434,10 @@ proto.AiService.transcribedText.prototype.setEnd = function(value) {
 
 
 /**
- * optional string text = 3;
+ * optional string speaker_id = 3;
  * @return {string}
  */
-proto.AiService.transcribedText.prototype.getText = function() {
+proto.AiService.transcribedText.prototype.getSpeakerId = function() {
   return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 3, ""));
 };
 
@@ -404,8 +446,26 @@ proto.AiService.transcribedText.prototype.getText = function() {
  * @param {string} value
  * @return {!proto.AiService.transcribedText} returns this
  */
-proto.AiService.transcribedText.prototype.setText = function(value) {
+proto.AiService.transcribedText.prototype.setSpeakerId = function(value) {
   return jspb.Message.setProto3StringField(this, 3, value);
+};
+
+
+/**
+ * optional string text = 4;
+ * @return {string}
+ */
+proto.AiService.transcribedText.prototype.getText = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 4, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.AiService.transcribedText} returns this
+ */
+proto.AiService.transcribedText.prototype.setText = function(value) {
+  return jspb.Message.setProto3StringField(this, 4, value);
 };
 
 

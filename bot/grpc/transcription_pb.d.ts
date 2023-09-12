@@ -7,6 +7,8 @@
 import * as jspb from "google-protobuf";
 
 export class VoiceAudio extends jspb.Message { 
+    getSpeakerId(): string;
+    setSpeakerId(value: string): VoiceAudio;
     getAudio(): Uint8Array | string;
     getAudio_asU8(): Uint8Array;
     getAudio_asB64(): string;
@@ -24,6 +26,7 @@ export class VoiceAudio extends jspb.Message {
 
 export namespace VoiceAudio {
     export type AsObject = {
+        speakerId: string,
         audio: Uint8Array | string,
     }
 }
@@ -33,6 +36,8 @@ export class transcribedText extends jspb.Message {
     setBegin(value: number): transcribedText;
     getEnd(): number;
     setEnd(value: number): transcribedText;
+    getSpeakerId(): string;
+    setSpeakerId(value: string): transcribedText;
     getText(): string;
     setText(value: string): transcribedText;
 
@@ -50,6 +55,7 @@ export namespace transcribedText {
     export type AsObject = {
         begin: number,
         end: number,
+        speakerId: string,
         text: string,
     }
 }
