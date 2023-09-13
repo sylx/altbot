@@ -36,7 +36,7 @@ export default class JoinCommand {
 			guildId: channel.guild.id,
 			debug: true
 		})
-		await registerConnections(conn,client)
+		await registerConnections(conn,channel,client)
 		await dataRepository.set('lastVoiceChannel', {
 			channelId: channel.id,
 			guildId: channel.guild.id
@@ -64,7 +64,8 @@ export async function joinLastChannel(client : Client) {
 				guildId: channId.guildId,
 				debug: true
 			})
-			await registerConnections(conn,client)		
+			const channel = guild.channels.cache.get(channId.channelId) as VoiceChannel
+			await registerConnections(conn,channel,client)		
 		}
 	}
 	

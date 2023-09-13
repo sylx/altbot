@@ -60,7 +60,7 @@ nvidia-nvtx-cu11==11.7.91
 onnx==1.14.1
 onnxruntime==1.15.1
 OpenCC==1.1.6
-openjtalk==0.3.0.dev3
+openjtalk==0.3.0.dev2
 opus-fast-mosestokenizer==0.0.8.3
 oyaml==1.0
 packaging==23.1
@@ -81,6 +81,7 @@ requests==2.31.0
 roman==4.1
 scikit-learn==1.3.0
 scipy==1.11.2
+six==1.16.0
 soundfile==0.12.1
 soxr==0.3.6
 sympy==1.12

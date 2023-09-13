@@ -27,6 +27,8 @@ export namespace TtsSpeakRequest {
 }
 
 export class TtsSpeakResponse extends jspb.Message { 
+    getText(): string;
+    setText(value: string): TtsSpeakResponse;
     getAudio(): Uint8Array | string;
     getAudio_asU8(): Uint8Array;
     getAudio_asB64(): string;
@@ -44,6 +46,7 @@ export class TtsSpeakResponse extends jspb.Message {
 
 export namespace TtsSpeakResponse {
     export type AsObject = {
+        text: string,
         audio: Uint8Array | string,
     }
 }

@@ -4,6 +4,7 @@ import {
     VoiceConnectionStatus, entersState,
     AudioPlayerStatus, getVoiceConnections,
 } from "@discordjs/voice"
+import { Guild, GuildMember,VoiceChannel } from "discord.js"
 import { resolveDependencies, resolveDependency } from "@utils/functions"
 import { Logger } from "@services"
 import { Readable } from "stream"
@@ -12,6 +13,7 @@ import { Snowflake } from "discord.js"
 import { Client } from "discordx"
 import { listen } from "../../utils/functions/listen"
 import * as fs from "node:fs"
+import { Tts } from "../../services/Tts"
 
 process.on("exit", async () => {
     getVoiceConnections().forEach(connection => {
@@ -19,11 +21,8 @@ process.on("exit", async () => {
     })
 })
 
-const player = createAudioPlayer({
-    debug: true
-})
-
-export const registerConnections = async (connection: VoiceConnection,client: Client) => {
+export const registerConnections = async (connection: VoiceConnection,channel: VoiceChannel,client: Client) => {
+    const tts=await resolveDependency(Tts)
     connection.on(VoiceConnectionStatus.Ready, () => {
         console.log('The connection has entered the Ready state - ready to play audio!');
     });
@@ -39,23 +38,17 @@ export const registerConnections = async (connection: VoiceConnection,client: Cl
             connection.destroy();
         }
     });
-    connection.subscribe(player)
+    
+    tts.setConnection(connection)
+ 
     connection.receiver.speaking.on('start', (userId) => {
         const user = client.users.cache.get(userId)
+        const member = channel.guild.members.cache.get(userId) as GuildMember
         if (user) {
-            listen(connection, user)
+            listen(connection, user, member)
         }
     })
     await entersState(connection, VoiceConnectionStatus.Ready, 30_000)
-}
-
-export const play = async (url: string) => {
-
-    const resource = createAudioResource(url, {
-        inputType: StreamType.Arbitrary,
-    });
-    player.play(resource)
-    await entersState(player, AudioPlayerStatus.Playing, 5000);
 }
 
 export const leaveAll = async () => {

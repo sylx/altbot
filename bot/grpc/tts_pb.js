@@ -227,6 +227,7 @@ proto.AiService.TtsSpeakResponse.prototype.toObject = function(opt_includeInstan
  */
 proto.AiService.TtsSpeakResponse.toObject = function(includeInstance, msg) {
   var f, obj = {
+    text: jspb.Message.getFieldWithDefault(msg, 1, ""),
     audio: msg.getAudio_asB64()
   };
 
@@ -265,6 +266,10 @@ proto.AiService.TtsSpeakResponse.deserializeBinaryFromReader = function(msg, rea
     var field = reader.getFieldNumber();
     switch (field) {
     case 1:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setText(value);
+      break;
+    case 2:
       var value = /** @type {!Uint8Array} */ (reader.readBytes());
       msg.setAudio(value);
       break;
@@ -297,10 +302,17 @@ proto.AiService.TtsSpeakResponse.prototype.serializeBinary = function() {
  */
 proto.AiService.TtsSpeakResponse.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
+  f = message.getText();
+  if (f.length > 0) {
+    writer.writeString(
+      1,
+      f
+    );
+  }
   f = message.getAudio_asU8();
   if (f.length > 0) {
     writer.writeBytes(
-      1,
+      2,
       f
     );
   }
@@ -308,16 +320,34 @@ proto.AiService.TtsSpeakResponse.serializeBinaryToWriter = function(message, wri
 
 
 /**
- * optional bytes audio = 1;
- * @return {!(string|Uint8Array)}
+ * optional string text = 1;
+ * @return {string}
  */
-proto.AiService.TtsSpeakResponse.prototype.getAudio = function() {
-  return /** @type {!(string|Uint8Array)} */ (jspb.Message.getFieldWithDefault(this, 1, ""));
+proto.AiService.TtsSpeakResponse.prototype.getText = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 1, ""));
 };
 
 
 /**
- * optional bytes audio = 1;
+ * @param {string} value
+ * @return {!proto.AiService.TtsSpeakResponse} returns this
+ */
+proto.AiService.TtsSpeakResponse.prototype.setText = function(value) {
+  return jspb.Message.setProto3StringField(this, 1, value);
+};
+
+
+/**
+ * optional bytes audio = 2;
+ * @return {!(string|Uint8Array)}
+ */
+proto.AiService.TtsSpeakResponse.prototype.getAudio = function() {
+  return /** @type {!(string|Uint8Array)} */ (jspb.Message.getFieldWithDefault(this, 2, ""));
+};
+
+
+/**
+ * optional bytes audio = 2;
  * This is a type-conversion wrapper around `getAudio()`
  * @return {string}
  */
@@ -328,7 +358,7 @@ proto.AiService.TtsSpeakResponse.prototype.getAudio_asB64 = function() {
 
 
 /**
- * optional bytes audio = 1;
+ * optional bytes audio = 2;
  * Note that Uint8Array is not supported on all browsers.
  * @see http://caniuse.com/Uint8Array
  * This is a type-conversion wrapper around `getAudio()`
@@ -345,7 +375,7 @@ proto.AiService.TtsSpeakResponse.prototype.getAudio_asU8 = function() {
  * @return {!proto.AiService.TtsSpeakResponse} returns this
  */
 proto.AiService.TtsSpeakResponse.prototype.setAudio = function(value) {
-  return jspb.Message.setProto3BytesField(this, 1, value);
+  return jspb.Message.setProto3BytesField(this, 2, value);
 };
 
 

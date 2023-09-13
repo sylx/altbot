@@ -1,22 +1,13 @@
-import { User } from "discord.js"
+import { GuildMember, User } from "discord.js"
 import { VoiceConnection,EndBehaviorType } from "@discordjs/voice";
 
 import { VoiceAudio, transcribedText } from "../../../grpc/transcription_pb"
 
-import { v4 as uuidv4 } from 'uuid';
-
 import * as prism from "prism-media"
-import {pipeline,Transform} from "node:stream"
-import { streamToBuffer } from '@jorgeferrero/stream-to-buffer';
-import * as fs from "node:fs"
 import { Logger } from "@services"
-
-import { Data } from "@entities"
-import { Database } from "@services"
 import { resolveDependency } from "@utils/functions"
-
-import { Writable,WritableOptions } from "node:stream"
 import { Transcription } from "../../services/Transcription";
+import { Tts } from "../../services/Tts";
 
 
 type ListeningStatus = {
@@ -28,7 +19,8 @@ type ListeningStatus = {
 let listeningStatus: {[key: string]: ListeningStatus} = {}
 
 
-export async function listen(connection: VoiceConnection,user: User){
+export async function listen(connection: VoiceConnection,user: User,member: GuildMember){
+        
     if(listeningStatus[user.id] && listeningStatus[user.id].listening){
         console.log(`already listening ${user.username}`)
         return
@@ -41,6 +33,7 @@ export async function listen(connection: VoiceConnection,user: User){
     try{
         const logger = await resolveDependency(Logger)
         const translation = await resolveDependency(Transcription)
+        const tts = await resolveDependency(Tts)
         const client = translation.getClient()
 
         logger.log(`listen start ${user.username}`,"info")
@@ -57,7 +50,11 @@ export async function listen(connection: VoiceConnection,user: User){
           console.error(err)
         })
         .on("data", (response : transcribedText) => {
-          console.log("from server",response.toObject())
+            console.log("from server",response.toObject())
+            const text = response.getText()
+            if(text){
+                tts.speak(`${member.displayName}さんが${text}と言いました`)
+            }
         })
         .on("end", () => {
           console.log("end write")

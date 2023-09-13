@@ -10,6 +10,7 @@ message TtsSpeakRequest {
 }
 
 message TtsSpeakResponse {
-	bytes audio = 1;
+	string text = 1;
+	bytes audio = 2;
 }
 
