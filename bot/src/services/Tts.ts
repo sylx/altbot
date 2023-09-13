@@ -39,12 +39,28 @@ export class Tts {
     getPlayer() : AudioPlayer{
         return this.player
     }
-    async waitForPlayerIdle() : Promise<AudioPlayer>{
-        return entersState(this.player, AudioPlayerStatus.Idle, 2 ** 31 - 1)
-    }
+    
     async speak(text: string) : Promise<void>{
         if(this.connection === null) return
         await entersState(this.connection, VoiceConnectionStatus.Ready, 30_000)
+
+        const playQueue : Array<Readable> = [];
+        let isPlaying = false;
+
+        const playNextInQueue=async () => {
+            if (!isPlaying && playQueue.length > 0) {
+                const nextItem = playQueue.shift() as Readable;
+                isPlaying = true;
+                const resource= createAudioResource(nextItem, {
+                    inputType: StreamType.OggOpus,
+                })
+                this.player.play(resource)
+                await entersState(this.player, AudioPlayerStatus.Playing, 5_000)
+                await entersState(this.player, AudioPlayerStatus.Idle, 2 ** 31 - 1)
+                isPlaying = false;
+                await playNextInQueue();
+            }
+        }
 
         const req = new TtsSpeakRequest()
         req.setText(text)
@@ -53,18 +69,16 @@ export class Tts {
             const audio = response.getAudio()
             console.log("from server",response.getText(),audio.length)            
             if(audio){
-                //play audio
-                // 前回の再生が終わるまで待つ
-                await this.waitForPlayerIdle()
-                // UInt8Array to stream
-                const oggStream = Readable.from(audio)
-                const resource= createAudioResource(oggStream, {
-                    inputType: StreamType.OggOpus,
-                })
-                this.player.play(resource)
-                //ここで終わると、再生が始まる前に次の再生が始まる可能性がある（？本当？）
-                await entersState(this.player, AudioPlayerStatus.Playing, 5_000)
-            }        
+                // UInt8Array to buffer
+                const buffer = Buffer.from(audio)
+                // buffer to stream
+                const oggStream = Readable.from(buffer)
+                playQueue.push(oggStream)
+                // 再生中でなければ、すぐに再生を開始
+                if (!isPlaying) {
+                    playNextInQueue();
+                }                
+            }
         }).on("end", async () => {
         }).on("error", (err) => {
             console.error(err)
