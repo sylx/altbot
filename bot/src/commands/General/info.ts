@@ -1,7 +1,8 @@
 import { Category } from "@discordx/utilities"
 import dayjs from "dayjs"
 import relativeTime from "dayjs/plugin/relativeTime"
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, CommandInteraction, EmbedBuilder, EmbedField } from "discord.js"
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, CommandInteraction, ComponentType, EmbedBuilder, EmbedField,
+	StringSelectMenuBuilder, StringSelectMenuOptionBuilder } from "discord.js"
 import { Client } from "discordx"
 import { injectable } from "tsyringe"
 dayjs.extend(relativeTime)
@@ -13,6 +14,8 @@ import { Stats } from "@services"
 import { getColor, isValidUrl, timeAgo } from "@utils/functions"
 
 import packageJSON from "../../../package.json"
+import { resolveDependency } from "@utils/functions"
+import { Tts } from "../../services/Tts"
 
 const links = [
 	{ label: 'Invite me!', url: generalConfig.links.invite },
@@ -31,6 +34,7 @@ export default class InfoCommand {
 
 	@Slash({
 		name: 'info',
+		description: 'Botのひみつを表示します'
 	})
 	@Guard()
 	async info(
@@ -127,13 +131,38 @@ export default class InfoCommand {
 				} else return null
 			})
 			.filter(link => link) as ButtonBuilder[]
+		const select = new StringSelectMenuBuilder()
+			.setCustomId('speaker_id')
+			.setPlaceholder('声の選択')
+		const tts = await resolveDependency(Tts)
+		const list = await tts.getSpeakersInfo()
+		list.getSpeakersList().forEach((speaker,i) => {
+			//25個までしか選択肢に入れられない
+			if(i >= 25) return false
+			select.addOptions(
+				new StringSelectMenuOptionBuilder()
+					.setLabel(speaker.getName())
+					.setValue(String(speaker.getIndex()))
+					.setDefault(speaker.getSelected() ? true : false)
+			)
+		})
+
 		const row = new ActionRowBuilder<ButtonBuilder>()
 			.addComponents(...buttons)
+		const row2 = new ActionRowBuilder<StringSelectMenuBuilder>()
+			.addComponents(select)
 		
 		// finally send the embed
-		interaction.followUp({
+		const res=await interaction.followUp({
 			embeds: [embed],
-			components: [row],
+			components: [row2,row],
+		})
+		const collector = res.createMessageComponentCollector({ componentType: ComponentType.StringSelect, time: 3600_000 });
+		collector.on('collect', async i => {
+			const selection = i.values[0];
+			await tts.setSpeaker(Number(selection))
+			await i.reply(`${i.user} 声を変更したよ`);
+			await tts.speak("声を変更したよ")
 		})
 
 	}

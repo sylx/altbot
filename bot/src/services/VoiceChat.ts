@@ -42,7 +42,7 @@ export class VoiceChat {
 		})
         await this.initVoiceConnection(connection)
         this.connection=connection
-        this.channel=channel
+        this.channel=channel        
     }
     async leave() : Promise<void>{
         this.connection?.destroy()
@@ -64,21 +64,25 @@ export class VoiceChat {
     }
 
     async initVoiceConnection(conn: VoiceConnection) : Promise<void>{
-        
+        await entersState(conn, VoiceConnectionStatus.Ready, 30_000)
         // set reconnect
-        conn.on(VoiceConnectionStatus.Disconnected, async (oldState, newState) => {        
-            // reconnect
-            try {
-                await Promise.race([
-                    entersState(conn, VoiceConnectionStatus.Signalling, 5_000),
-                    entersState(conn, VoiceConnectionStatus.Connecting, 5_000),
-                ]);
-                // Seems to be reconnecting to a new channel - ignore disconnect
-            } catch (error) {
-                // Seems to be a real disconnect which SHOULDN'T be recovered from
-                conn.destroy();
+        conn.on("stateChange",async (oldState, newState) => {        
+            const status = newState.status
+            if (status === VoiceConnectionStatus.Disconnected){
+                // reconnect
+                console.log("reconnecting...")
+                try {
+                    await Promise.race([
+                        entersState(conn, VoiceConnectionStatus.Signalling, 5_000),
+                        entersState(conn, VoiceConnectionStatus.Connecting, 5_000),
+                    ]);
+                    // Seems to be reconnecting to a new channel - ignore disconnect
+                } catch (error) {
+                    // Seems to be a real disconnect which SHOULDN'T be recovered from
+                    this.leave()
+                }
             }
         })
-        await entersState(conn, VoiceConnectionStatus.Ready, 30_000)
+
     }
 }

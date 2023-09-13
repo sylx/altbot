@@ -1,6 +1,6 @@
 import { Category } from "@discordx/utilities"
 import { ApplicationCommandOptionType, CommandInteraction, Message } from "discord.js"
-import { Client, SlashOption } from "discordx"
+import { Client, SlashChoice, SlashOption } from "discordx"
 import { resolveDependency, simpleErrorEmbed, simpleSuccessEmbed } from "@utils/functions"
 import { Discord, Slash } from "@decorators"
 import { Tts } from "../../services/Tts"
@@ -10,6 +10,7 @@ import { Tts } from "../../services/Tts"
 export default class SayCommand {
 
 	@Slash({ 
+		description: "喋ります",
 		name: 'say'
 	})
 	async say(

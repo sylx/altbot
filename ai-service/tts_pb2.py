@@ -11,9 +11,10 @@ from google.protobuf.internal import builder as _builder
 _sym_db = _symbol_database.Default()
 
 
+from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\ttts.proto\x12\tAiService\"\x1f\n\x0fTtsSpeakRequest\x12\x0c\n\x04text\x18\x01 \x01(\t\"/\n\x10TtsSpeakResponse\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\r\n\x05\x61udio\x18\x02 \x01(\x0c\x32O\n\x03Tts\x12H\n\x0bSpeakStream\x12\x1a.AiService.TtsSpeakRequest\x1a\x1b.AiService.TtsSpeakResponse0\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\ttts.proto\x12\tAiService\x1a\x1bgoogle/protobuf/empty.proto\"\x1f\n\x0fTtsSpeakRequest\x12\x0c\n\x04text\x18\x01 \x01(\t\"/\n\x10TtsSpeakResponse\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\r\n\x05\x61udio\x18\x02 \x01(\x0c\"A\n\x12TtsSpeakerInfoList\x12+\n\x08speakers\x18\x01 \x03(\x0b\x32\x19.AiService.TtsSpeakerInfo\"?\n\x0eTtsSpeakerInfo\x12\r\n\x05index\x18\x01 \x01(\x05\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x10\n\x08selected\x18\x03 \x01(\x08\"!\n\x10TtsSpeakerSelect\x12\r\n\x05index\x18\x01 \x01(\x05\x32\xdb\x01\n\x03Tts\x12H\n\x0bSpeakStream\x12\x1a.AiService.TtsSpeakRequest\x1a\x1b.AiService.TtsSpeakResponse0\x01\x12\x44\n\x0bGetSpeakers\x12\x16.google.protobuf.Empty\x1a\x1d.AiService.TtsSpeakerInfoList\x12\x44\n\nSetSpeaker\x12\x1b.AiService.TtsSpeakerSelect\x1a\x19.AiService.TtsSpeakerInfob\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -21,10 +22,16 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'tts_pb2', _globals)
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
-  _globals['_TTSSPEAKREQUEST']._serialized_start=24
-  _globals['_TTSSPEAKREQUEST']._serialized_end=55
-  _globals['_TTSSPEAKRESPONSE']._serialized_start=57
-  _globals['_TTSSPEAKRESPONSE']._serialized_end=104
-  _globals['_TTS']._serialized_start=106
-  _globals['_TTS']._serialized_end=185
+  _globals['_TTSSPEAKREQUEST']._serialized_start=53
+  _globals['_TTSSPEAKREQUEST']._serialized_end=84
+  _globals['_TTSSPEAKRESPONSE']._serialized_start=86
+  _globals['_TTSSPEAKRESPONSE']._serialized_end=133
+  _globals['_TTSSPEAKERINFOLIST']._serialized_start=135
+  _globals['_TTSSPEAKERINFOLIST']._serialized_end=200
+  _globals['_TTSSPEAKERINFO']._serialized_start=202
+  _globals['_TTSSPEAKERINFO']._serialized_end=265
+  _globals['_TTSSPEAKERSELECT']._serialized_start=267
+  _globals['_TTSSPEAKERSELECT']._serialized_end=300
+  _globals['_TTS']._serialized_start=303
+  _globals['_TTS']._serialized_end=522
 # @@protoc_insertion_point(module_scope)

@@ -1,8 +1,12 @@
 syntax = "proto3";
 package AiService;
 
+import "google/protobuf/empty.proto";
+
 service Tts {
 	rpc SpeakStream (TtsSpeakRequest) returns (stream TtsSpeakResponse);
+	rpc GetSpeakers (google.protobuf.Empty) returns (TtsSpeakerInfoList);
+	rpc SetSpeaker (TtsSpeakerSelect) returns (TtsSpeakerInfo);
 }
 
 message TtsSpeakRequest {
@@ -14,3 +18,14 @@ message TtsSpeakResponse {
 	bytes audio = 2;
 }
 
+message TtsSpeakerInfoList {
+	repeated TtsSpeakerInfo speakers = 1;
+}
+message TtsSpeakerInfo {
+	int32 index = 1;
+	string name = 2;
+	bool selected = 3;
+}
+message TtsSpeakerSelect {
+	int32 index = 1;
+}

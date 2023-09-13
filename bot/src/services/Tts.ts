@@ -6,15 +6,16 @@ import { TtsClient } from "../../grpc/tts_grpc_pb"
 import {
     VoiceConnection, createAudioPlayer,AudioPlayer,
     createAudioResource, StreamType,
-    VoiceConnectionStatus, entersState,
+    VoiceConnectionStatus, entersState,VoiceConnectionState,
     AudioPlayerStatus, getVoiceConnections, PlayerSubscription,
 } from "@discordjs/voice"
 
 
-import { TtsSpeakRequest,TtsSpeakResponse } from "../../grpc/tts_pb"
+import { TtsSpeakRequest,TtsSpeakResponse,TtsSpeakerInfoList,TtsSpeakerSelect } from "../../grpc/tts_pb"
+import * as google_protobuf_empty_pb from "google-protobuf/google/protobuf/empty_pb";
+
 import { Readable } from "stream"
 import { VoiceChat } from "./VoiceChat"
-import { connect } from "http2"
 
 @singleton()
 export class Tts {
@@ -62,17 +63,34 @@ export class Tts {
         this.isPlaying=false
     }
 
+
+    async subscribe() : Promise<void>{
+        const connection=this.voiceChat.getConnection()
+        if(connection === null) throw "yet join voice channel"
+
+        await entersState(connection, VoiceConnectionStatus.Ready, 20e3)
+        console.log("subscribe")
+        const subscription=connection.subscribe(this.player)
+        const observer = (oldState: VoiceConnectionState, newState: VoiceConnectionState) : void =>{
+            if(newState.status === VoiceConnectionStatus.Destroyed){
+                this.subscription=null
+            }
+        }
+        connection.on("stateChange", observer)
+
+        if(subscription){
+            this.subscription=subscription
+        }else{
+            throw "player subscribe error"
+        }
+    }
+
     async speak(text: string) : Promise<void>{
         if(this.subscription === null){
-            const connection=this.voiceChat.getConnection()
-            if(connection === null) throw "yet join voice channel"
-            console.log("subscribe")
-            const subscription=connection.subscribe(this.player)
-            if(subscription){
-                this.subscription=subscription
-            }else{
-                throw "player subscribe error"
-            }
+            await this.subscribe()
+        }
+        if(this.subscription?.connection){
+            await entersState(this.subscription?.connection, VoiceConnectionStatus.Ready, 3000)
         }
         const req = new TtsSpeakRequest()
         req.setText(text)
@@ -97,6 +115,32 @@ export class Tts {
             console.log("recieve end")
         }).on("error", (err) => {
             console.error(err)
+        })
+    }
+
+    getSpeakersInfo(): Promise<TtsSpeakerInfoList> {
+        return new Promise((resolve, reject) => {
+            const empty=new google_protobuf_empty_pb.Empty()
+            this.client.getSpeakers(empty, (err, response) => {
+                if(err){
+                    reject(err)
+                }else{
+                    resolve(response)
+                }
+            })
+        })
+    }
+    setSpeaker(speakerId: number): Promise<void> {
+        return new Promise((resolve, reject) => {
+            const req = new TtsSpeakerSelect()
+            req.setIndex(speakerId)
+            this.client.setSpeaker(req, (err, response) => {
+                if(err){
+                    reject(err)
+                }else{
+                    resolve()
+                }
+            })
         })
     }
 }
