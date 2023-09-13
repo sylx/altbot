@@ -21,6 +21,8 @@ export class Tts {
     public client : TtsClient
     protected player : AudioPlayer
     protected subscription : PlayerSubscription | null = null
+    protected playQueue : Array<Readable> = []
+    protected isPlaying = false
     constructor(
         @inject(delay(() => VoiceChat)) private voiceChat: VoiceChat,
     ) {
@@ -39,6 +41,21 @@ export class Tts {
         return this.player
     }
 
+    async playNextInQueue(): Promise<void> {
+        if (!this.isPlaying && this.playQueue.length > 0) {
+            const nextItem = this.playQueue.shift() as Readable;
+            this.isPlaying = true;
+            const resource= createAudioResource(nextItem, {
+                inputType: StreamType.OggOpus,
+            })
+            this.player.play(resource)
+            await entersState(this.player, AudioPlayerStatus.Playing, 5_000)
+            await entersState(this.player, AudioPlayerStatus.Idle, 2 ** 31 - 1)
+            this.isPlaying = false;
+            await this.playNextInQueue();
+        }
+    }
+
     async speak(text: string) : Promise<void>{
         if(this.subscription === null){
             const connection=this.voiceChat.getConnection()
@@ -53,22 +70,6 @@ export class Tts {
         }
         const playQueue : Array<Readable> = [];
         let isPlaying = false;
-        let isStreamEnd = false;
-
-        const playNextInQueue=async () => {
-            if (!isPlaying && playQueue.length > 0) {
-                const nextItem = playQueue.shift() as Readable;
-                isPlaying = true;
-                const resource= createAudioResource(nextItem, {
-                    inputType: StreamType.OggOpus,
-                })
-                this.player.play(resource)
-                await entersState(this.player, AudioPlayerStatus.Playing, 5_000)
-                await entersState(this.player, AudioPlayerStatus.Idle, 2 ** 31 - 1)
-                isPlaying = false;
-                await playNextInQueue();
-            }
-        }
 
         const req = new TtsSpeakRequest()
         req.setText(text)
@@ -82,14 +83,15 @@ export class Tts {
                 const buffer = Buffer.from(audio)
                 // buffer to stream
                 const oggStream = Readable.from(buffer)
-                playQueue.push(oggStream)
+                console.log("queue",this.playQueue.length,response.getText())
+                this.playQueue.push(oggStream)
                 // 再生中でなければ、すぐに再生を開始
                 if (!isPlaying) {
-                    playNextInQueue();
+                    this.playNextInQueue();
                 }                
             }
         }).on("end", async () => {
-            isStreamEnd = true
+            console.log("recieve end")
         }).on("error", (err) => {
             console.error(err)
         })
