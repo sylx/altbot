@@ -56,6 +56,12 @@ export class Tts {
         }
     }
 
+    abort() : void{
+        this.player.stop()
+        this.playQueue=[]
+        this.isPlaying=false
+    }
+
     async speak(text: string) : Promise<void>{
         if(this.subscription === null){
             const connection=this.voiceChat.getConnection()
@@ -68,9 +74,6 @@ export class Tts {
                 throw "player subscribe error"
             }
         }
-        const playQueue : Array<Readable> = [];
-        let isPlaying = false;
-
         const req = new TtsSpeakRequest()
         req.setText(text)
         const stream=this.client.speakStream(req)
@@ -86,7 +89,7 @@ export class Tts {
                 console.log("queue",this.playQueue.length,response.getText())
                 this.playQueue.push(oggStream)
                 // 再生中でなければ、すぐに再生を開始
-                if (!isPlaying) {
+                if (!this.isPlaying) {
                     this.playNextInQueue();
                 }                
             }
