@@ -3,13 +3,13 @@ import type { CommandInteraction, Message } from "discord.js"
 import { Client } from "discordx"
 
 import { Discord, Slash } from "@decorators"
-import { leaveAll } from "../../utils/functions/voice_connection"
 import { simpleSuccessEmbed } from "@utils/functions"
 
 
 import { Data } from "@entities"
 import { Database } from "@services"
 import { resolveDependency } from "@utils/functions"
+import { VoiceChat } from "../../services/VoiceChat"
 
 @Discord()
 @Category('General')
@@ -23,10 +23,11 @@ export default class LeaveCommand {
 		client: Client,
 		{ localize }: InteractionData
 	) {
-		await leaveAll()
 		const db = await resolveDependency(Database)
+		const voiceChat = await resolveDependency(VoiceChat)
 		const dataRepository = db.get(Data)
 		await dataRepository.set('lastVoiceChannel', null)
+		await voiceChat.leave()
 
 		simpleSuccessEmbed(
 			interaction,

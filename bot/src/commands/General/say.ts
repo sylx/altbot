@@ -1,7 +1,7 @@
 import { Category } from "@discordx/utilities"
 import { ApplicationCommandOptionType, CommandInteraction, Message } from "discord.js"
 import { Client, SlashOption } from "discordx"
-import { resolveDependency, simpleSuccessEmbed } from "@utils/functions"
+import { resolveDependency, simpleErrorEmbed, simpleSuccessEmbed } from "@utils/functions"
 import { Discord, Slash } from "@decorators"
 import { Tts } from "../../services/Tts"
 
@@ -19,11 +19,26 @@ export default class SayCommand {
 		{ localize }: InteractionData
 	) {
 		const tts=await resolveDependency(Tts)
-		await tts.speak(text)
-		simpleSuccessEmbed(
-			interaction,
-			`言いました: ${text}`
-		)
+		try {
+			await tts.speak(text)
+			simpleSuccessEmbed(
+				interaction,
+				`言いました: ${text}`
+			)
+		}catch( err: any ){
+			if(err == "yet join voice channel"){
+				simpleErrorEmbed(
+					interaction,
+					`まずはボイスチャンネルに呼んでください /join`
+				)
+			}else{
+				simpleErrorEmbed(
+					interaction,
+					err
+				)
+				console.error(err)
+			}
+		}
 	}
 
 }

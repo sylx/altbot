@@ -4,13 +4,11 @@ import { Client } from "discordx"
 import { Discord, Guard, Slash, SlashOption } from "@decorators"
 import { Disabled } from "@guards"
 import { simpleSuccessEmbed } from "@utils/functions"
-import { joinVoiceChannel } from "@discordjs/voice"
-import { leaveAll, registerConnections } from "../../utils/functions/voice_connection"
-import { createDiscordJSAdapter } from "../../utils/functions/adapter"
 
 import { Data } from "@entities"
 import { Database } from "@services"
 import { resolveDependency } from "@utils/functions"
+import { VoiceChat } from "../../services/VoiceChat"
 
 @Discord()
 export default class JoinCommand {
@@ -28,15 +26,11 @@ export default class JoinCommand {
 		{ localize }: InteractionData
 	) {
 		const db = await resolveDependency(Database)
+		const voiceChat = await resolveDependency(VoiceChat)
 		const dataRepository = db.get(Data)
 
-		const conn = joinVoiceChannel({
-			adapterCreator: channel.guild.voiceAdapterCreator,
-			channelId: channel.id,
-			guildId: channel.guild.id,
-			debug: true
-		})
-		await registerConnections(conn,channel,client)
+		await voiceChat.join(channel)
+
 		await dataRepository.set('lastVoiceChannel', {
 			channelId: channel.id,
 			guildId: channel.guild.id
@@ -51,21 +45,15 @@ export default class JoinCommand {
 
 export async function joinLastChannel(client : Client) {
 	const db = await resolveDependency(Database)
+	const voiceChat = await resolveDependency(VoiceChat)
 	const dataRepository = db.get(Data)
 	const channId = await dataRepository.get('lastVoiceChannel')
 
 	if (channId) {
-		await leaveAll()
+		await voiceChat.leave()
 		const guild = client.guilds.cache.get(channId.guildId)
 		if(guild){
-			const conn = joinVoiceChannel({
-				adapterCreator: guild.voiceAdapterCreator,
-				channelId: channId.channelId,
-				guildId: channId.guildId,
-				debug: true
-			})
-			const channel = guild.channels.cache.get(channId.channelId) as VoiceChannel
-			await registerConnections(conn,channel,client)		
+			await voiceChat.join(guild.channels.cache.get(channId.channelId) as VoiceChannel)
 		}
 	}
 	

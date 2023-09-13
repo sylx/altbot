@@ -35,7 +35,6 @@ class Tts(tts_pb2_grpc.TtsServicer):
         _ = self.net_g_ms.eval()
         utils.load_checkpoint(model, self.net_g_ms)
 
-   
     def SpeakStream(self, request, context):
         # リクエストを受け取る
         wholeText = request.text

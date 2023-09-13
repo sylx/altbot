@@ -7,18 +7,22 @@ import {
     VoiceConnection, createAudioPlayer,AudioPlayer,
     createAudioResource, StreamType,
     VoiceConnectionStatus, entersState,
-    AudioPlayerStatus, getVoiceConnections,
+    AudioPlayerStatus, getVoiceConnections, PlayerSubscription,
 } from "@discordjs/voice"
+
 
 import { TtsSpeakRequest,TtsSpeakResponse } from "../../grpc/tts_pb"
 import { Readable } from "stream"
+import { VoiceChat } from "./VoiceChat"
+import { connect } from "http2"
 
 @singleton()
 export class Tts {
     public client : TtsClient
     protected player : AudioPlayer
-    protected connection : VoiceConnection | null = null
+    protected subscription : PlayerSubscription | null = null
     constructor(
+        @inject(delay(() => VoiceChat)) private voiceChat: VoiceChat,
     ) {
         this.client=new TtsClient(
             "localhost:1234",
@@ -31,21 +35,25 @@ export class Tts {
     getClient() : TtsClient{
         return this.client
     }
-    setConnection(connection: VoiceConnection) : void{
-        this.connection=connection
-        connection.subscribe(this.player)
-    }
-
     getPlayer() : AudioPlayer{
         return this.player
     }
-    
-    async speak(text: string) : Promise<void>{
-        if(this.connection === null) return
-        await entersState(this.connection, VoiceConnectionStatus.Ready, 30_000)
 
+    async speak(text: string) : Promise<void>{
+        if(this.subscription === null){
+            const connection=this.voiceChat.getConnection()
+            if(connection === null) throw "yet join voice channel"
+            console.log("subscribe")
+            const subscription=connection.subscribe(this.player)
+            if(subscription){
+                this.subscription=subscription
+            }else{
+                throw "player subscribe error"
+            }
+        }
         const playQueue : Array<Readable> = [];
         let isPlaying = false;
+        let isStreamEnd = false;
 
         const playNextInQueue=async () => {
             if (!isPlaying && playQueue.length > 0) {
@@ -65,6 +73,7 @@ export class Tts {
         const req = new TtsSpeakRequest()
         req.setText(text)
         const stream=this.client.speakStream(req)
+
         stream.on("data", async (response : TtsSpeakResponse) => {
             const audio = response.getAudio()
             console.log("from server",response.getText(),audio.length)            
@@ -80,6 +89,7 @@ export class Tts {
                 }                
             }
         }).on("end", async () => {
+            isStreamEnd = true
         }).on("error", (err) => {
             console.error(err)
         })
