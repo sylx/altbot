@@ -19,7 +19,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
    
     def __init__(self) -> None:
         super().__init__()
-        self.asr = FasterWhisperASR(modelsize="base", lan="ja", cache_dir=".model_cache", model_dir=None)
+        self.asr = FasterWhisperASR(modelsize="small", lan="ja", cache_dir=".model_cache", model_dir=None)
         self.online = {}
         self.decoder = Decoder()
         self._warmup()
@@ -50,7 +50,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
             sf_file = sf.SoundFile(io.BytesIO(audio),mode='r',format='raw',subtype='PCM_16',channels=1,samplerate=16000)
             # to ndarray
             audio,_ = librosa.load(sf_file,sr=16000)
-            librosa.util.normalize(audio)
+            #librosa.util.normalize(audio)
             # audio は opus でエンコードされた音声データのバイナリ
 #            audio = bytes(audio)
 #            audio = self.decoder.decode(audio)

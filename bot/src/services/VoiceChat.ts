@@ -31,6 +31,9 @@ export class VoiceChat {
     getChannel() : VoiceChannel | null{
         return this.channel
     }
+    isEnable() : boolean{
+        return this.connection !== null
+    }
 
     async join(channel: VoiceChannel) : Promise<void>{
         await this.leave()
