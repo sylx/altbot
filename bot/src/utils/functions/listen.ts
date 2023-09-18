@@ -1,6 +1,6 @@
 import { GuildMember, User } from "discord.js"
 import { VoiceConnection,EndBehaviorType } from "@discordjs/voice";
-import { transcribedText } from "../../../grpc/transcription_pb"
+import { TranscribedText } from "../../../grpc/transcription_pb"
 import { Logger } from "@services"
 import { resolveDependency } from "@utils/functions"
 import { Transcription,TranscriptionWriteStream } from "../../services/Transcription";
