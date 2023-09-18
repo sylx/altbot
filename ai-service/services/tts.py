@@ -12,11 +12,13 @@ import tts_pb2_grpc
 import torch
 from memory_profiler import profile
 dev = "cuda:0"
+import asyncio
 
 class Tts(tts_pb2_grpc.TtsServicer):
    
-    def __init__(self) -> None:        
+    def __init__(self,pool) -> None:        
         super().__init__()
+        self.pool = pool
         model = f'{Path(__file__).parent.parent}/vits_models/ruise/1158_epochs.pth'
         config = f'{Path(__file__).parent.parent}/vits_models/ruise/config.json'
         self.hps_ms = utils.get_hparams_from_file(config)
@@ -36,7 +38,7 @@ class Tts(tts_pb2_grpc.TtsServicer):
         self.speaker_id = 0
         utils.load_checkpoint(model, self.net_g_ms)
 
-    def SpeakStream(self, request, context):
+    async def SpeakStream(self, request, context):
         # リクエストを受け取る
         wholeText = request.text
         print(f"received {wholeText}")
@@ -48,27 +50,32 @@ class Tts(tts_pb2_grpc.TtsServicer):
                 continue
             
             # 音声データを生成する
-            length_scale, text = get_label_value(text, 'LENGTH', 1, 'length scale')
-            noise_scale, text = get_label_value(text, 'NOISE', 0.667, 'noise scale')
-            noise_scale_w, text = get_label_value(text, 'NOISEW', 0.8, 'deviation of noise')
-            cleaned, text = get_label(text, 'CLEANED')
-            stn_tst = get_text(text, self.hps_ms, cleaned=cleaned)
-            with no_grad():
-                x_tst = stn_tst.unsqueeze(0).to(dev)
-                x_tst_lengths = LongTensor([stn_tst.size(0)]).to(dev)
-                sid = LongTensor([self.speaker_id]).to(dev)
-                audio = self.net_g_ms.infer(x_tst, x_tst_lengths, sid=sid, noise_scale=noise_scale,
-                                    noise_scale_w=noise_scale_w, length_scale=length_scale)[0][0, 0].data.cpu().float().numpy()
-                # convert sample rate to 24000 using scipy
-                audio = audio.astype(np.float32)
-                audio = librosa.resample(audio, orig_sr=22050, target_sr=24000) 
+            audio = await asyncio.get_running_loop().run_in_executor(self.pool, self.generateSpeech, text)
+            yield tts_pb2.TtsSpeakResponse(audio=audio,text=text)
 
-                f = io.BytesIO() # create a memory file
-                sf.write(f, audio, 24000, format='OGG', subtype='OPUS') # write audio data to memory file
-                # return ogg opus audio data
-                print(f"encoded {len(audio)} bytes for {text}")
-                yield tts_pb2.TtsSpeakResponse(audio=f.getvalue(),text=text)
-    
+    def generateSpeech(self,text):
+        length_scale, text = get_label_value(text, 'LENGTH', 1, 'length scale')
+        noise_scale, text = get_label_value(text, 'NOISE', 0.667, 'noise scale')
+        noise_scale_w, text = get_label_value(text, 'NOISEW', 0.8, 'deviation of noise')
+        cleaned, text = get_label(text, 'CLEANED')
+        stn_tst = get_text(text, self.hps_ms, cleaned=cleaned)
+        with no_grad():
+            x_tst = stn_tst.unsqueeze(0).to(dev)
+            x_tst_lengths = LongTensor([stn_tst.size(0)]).to(dev)
+            sid = LongTensor([self.speaker_id]).to(dev)
+            # black magic
+            audio = self.net_g_ms.infer(x_tst, x_tst_lengths, sid=sid, noise_scale=noise_scale,
+                                noise_scale_w=noise_scale_w, length_scale=length_scale)[0][0, 0].data.cpu().float().numpy()
+            # convert sample rate to 24000 using scipy
+            audio = audio.astype(np.float32)
+            audio = librosa.resample(audio, orig_sr=22050, target_sr=24000) 
+
+            f = io.BytesIO() # create a memory file
+            sf.write(f, audio, 24000, format='OGG', subtype='OPUS') # write audio data to memory file
+            # return ogg opus audio data
+            print(f"encoded {len(audio)} bytes for {text}")
+            return f.getvalue()
+
     def GetSpeakers(self, request, context):
         list = tts_pb2.TtsSpeakerInfoList()
         for i, speaker in enumerate(self.speakers):

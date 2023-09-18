@@ -8,7 +8,7 @@ import {
     AudioPlayerStatus, getVoiceConnections,
 } from "@discordjs/voice"
 
-import { Channel, VoiceChannel } from "discord.js"
+import { Channel, VoiceChannel,GuildMember } from "discord.js"
 import { Client } from "discordx"
 import { listen } from "../utils/functions/listen"
 
@@ -60,6 +60,7 @@ export class VoiceChat {
         connection.receiver.speaking.on('start', (userId) => {
             const user = this.client.users.cache.get(userId)
             const member = this.channel?.guild.members.cache.get(userId) as GuildMember
+            console.log("speaking start",user?.username)
             if (user) {
                 listen(connection, user, member)
             }

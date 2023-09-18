@@ -1,14 +1,10 @@
 import { GuildMember, User } from "discord.js"
 import { VoiceConnection,EndBehaviorType } from "@discordjs/voice";
-
-import { VoiceAudio, transcribedText } from "../../../grpc/transcription_pb"
-
-import * as prism from "prism-media"
+import { transcribedText } from "../../../grpc/transcription_pb"
 import { Logger } from "@services"
 import { resolveDependency } from "@utils/functions"
-import { Transcription } from "../../services/Transcription";
-import { mem } from "node-os-utils";
-
+import { Transcription,TranscriptionWriteStream } from "../../services/Transcription";
+import { VoiceChat } from "../../services/VoiceChat";
 
 type ListeningStatus = {
     listening: boolean,
@@ -17,7 +13,6 @@ type ListeningStatus = {
 }
 
 let listeningStatus: {[key: string]: ListeningStatus} = {}
-
 
 export async function listen(connection: VoiceConnection,user: User,member: GuildMember){
         
@@ -32,66 +27,47 @@ export async function listen(connection: VoiceConnection,user: User,member: Guil
   
     try{
         const logger = await resolveDependency(Logger)
-        const translation = await resolveDependency(Transcription)
-        const client = translation.getClient()
+        const transcription = await resolveDependency(Transcription)
+        const voiceChat = await resolveDependency(VoiceChat)
+        const client = transcription.getClient()
 
         logger.log(`listen start ${user.username}`,"info")
+
+        const api_stream = client.transcriptionBiStreams()
+        const api_promise = new Promise((resolve,reject)=>{
+            api_stream.on("error", (err) => {
+            console.error(err)
+            })
+            .on("data", (response : transcribedText) => {
+                console.log("from server",response.toObject())
+                const text = response.getText()
+                console.log(`${member.displayName} : ${text}`)
+            })
+            .on("end", () => {
+                console.log("api read end")
+                resolve()
+            })
+        }) as Promise<void>
 
         const receiver = connection.receiver;
         const opusStream=receiver.subscribe(user.id, {
             end: {
                 behavior: EndBehaviorType.AfterSilence,
-                duration: 1_000,
+                duration: 500,
             },
         })
-        const stream = client.transcriptionBiStreams()
-        stream.on("error", (err) => {
-          console.error(err)
-        })
-        .on("data", (response : transcribedText) => {
-            console.log("from server",response.toObject())
-            const text = response.getText()
-            console.log(`${member.displayName} : ${text}`)
-        })
-        .on("end", () => {
-          console.log("end write")
-          receiver.subscriptions.delete(user.id)
-          listeningStatus[user.id].listening=false
-          logger.log(`listen end ${user.username}`,"info")
-        })
+        const output = new TranscriptionWriteStream(api_stream,user.id)
 
-        const opusDecoder=new prism.opus.Decoder({rate: 16000, channels: 1, frameSize: 960})
-    
-        const buffer=Buffer.alloc(16000 * 2 * 4) // 16KHz * 2bytes * 4secs
-        let offset=0
-        const flush=()=>{
-            const audio = new VoiceAudio()
-            
-            console.log("send",user.id,offset)
-
-            audio.setSpeakerId(user.id)
-            audio.setAudio(buffer.subarray(0,offset))
-            stream.write(audio)
-            offset=0
-        }
-        opusStream.pipe(opusDecoder).on("error", (err) => {
-            console.error(err)
-            stream.end()
-        }).on("data", (data : Buffer) => {
-            //append to buffer
-            data.copy(buffer,offset)
-            offset+=data.length
-            if(offset >= 16000 * 2 * 2){ // 2secs
-                flush()
-            }
-        }).on("end", () => {
-            flush()
-            console.log("opus stream end")
-            stream.end()
-        })
-
-        
-        //const data = await streamToBuffer(opusStream.pipe(opusDecoder))
+        const output_promsie = new Promise((resolve,reject)=>{
+            opusStream
+                .pipe(output)
+                .on("finish",async ()=>{
+                    console.log("write end")
+                    listeningStatus[user.id].listening=false
+                    resolve()
+                })
+        }) as Promise<void>
+        await Promise.all([api_promise,output_promsie])
 	} catch (error) {
 		console.warn(error);
 	}

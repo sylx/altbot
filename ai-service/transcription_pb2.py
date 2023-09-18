@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13transcription.proto\x12\tAiService\"/\n\nVoiceAudio\x12\x12\n\nspeaker_id\x18\x01 \x01(\t\x12\r\n\x05\x61udio\x18\x02 \x01(\x0c\"O\n\x0ftranscribedText\x12\r\n\x05\x62\x65gin\x18\x01 \x01(\x03\x12\x0b\n\x03\x65nd\x18\x02 \x01(\x03\x12\x12\n\nspeaker_id\x18\x03 \x01(\t\x12\x0c\n\x04text\x18\x04 \x01(\t2`\n\rTranscription\x12O\n\x16TranscriptionBiStreams\x12\x15.AiService.VoiceAudio\x1a\x1a.AiService.transcribedText(\x01\x30\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13transcription.proto\x12\tAiService\"/\n\nVoiceAudio\x12\x12\n\nspeaker_id\x18\x01 \x01(\t\x12\r\n\x05\x61udio\x18\x02 \x01(\x0c\"H\n\x11\x44iscordOpusPacket\x12\x11\n\ttimestamp\x18\x01 \x01(\x03\x12\x12\n\nspeaker_id\x18\x02 \x01(\t\x12\x0c\n\x04\x64\x61ta\x18\x03 \x01(\x0c\"X\n\x15\x44iscordOpusPacketList\x12-\n\x07packets\x18\x01 \x03(\x0b\x32\x1c.AiService.DiscordOpusPacket\x12\x10\n\x08is_final\x18\x02 \x01(\x08\"O\n\x0fTranscribedText\x12\r\n\x05\x62\x65gin\x18\x01 \x01(\x03\x12\x0b\n\x03\x65nd\x18\x02 \x01(\x03\x12\x12\n\nspeaker_id\x18\x03 \x01(\t\x12\x0c\n\x04text\x18\x04 \x01(\t2k\n\rTranscription\x12Z\n\x16TranscriptionBiStreams\x12 .AiService.DiscordOpusPacketList\x1a\x1a.AiService.TranscribedText(\x01\x30\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -23,8 +23,12 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
   _globals['_VOICEAUDIO']._serialized_start=34
   _globals['_VOICEAUDIO']._serialized_end=81
-  _globals['_TRANSCRIBEDTEXT']._serialized_start=83
-  _globals['_TRANSCRIBEDTEXT']._serialized_end=162
-  _globals['_TRANSCRIPTION']._serialized_start=164
-  _globals['_TRANSCRIPTION']._serialized_end=260
+  _globals['_DISCORDOPUSPACKET']._serialized_start=83
+  _globals['_DISCORDOPUSPACKET']._serialized_end=155
+  _globals['_DISCORDOPUSPACKETLIST']._serialized_start=157
+  _globals['_DISCORDOPUSPACKETLIST']._serialized_end=245
+  _globals['_TRANSCRIBEDTEXT']._serialized_start=247
+  _globals['_TRANSCRIBEDTEXT']._serialized_end=326
+  _globals['_TRANSCRIPTION']._serialized_start=328
+  _globals['_TRANSCRIPTION']._serialized_end=435
 # @@protoc_insertion_point(module_scope)

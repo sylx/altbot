@@ -11,30 +11,30 @@ interface ITranscriptionService extends grpc.ServiceDefinition<grpc.UntypedServi
     transcriptionBiStreams: ITranscriptionService_ITranscriptionBiStreams;
 }
 
-interface ITranscriptionService_ITranscriptionBiStreams extends grpc.MethodDefinition<transcription_pb.VoiceAudio, transcription_pb.transcribedText> {
+interface ITranscriptionService_ITranscriptionBiStreams extends grpc.MethodDefinition<transcription_pb.DiscordOpusPacketList, transcription_pb.TranscribedText> {
     path: "/AiService.Transcription/TranscriptionBiStreams";
     requestStream: true;
     responseStream: true;
-    requestSerialize: grpc.serialize<transcription_pb.VoiceAudio>;
-    requestDeserialize: grpc.deserialize<transcription_pb.VoiceAudio>;
-    responseSerialize: grpc.serialize<transcription_pb.transcribedText>;
-    responseDeserialize: grpc.deserialize<transcription_pb.transcribedText>;
+    requestSerialize: grpc.serialize<transcription_pb.DiscordOpusPacketList>;
+    requestDeserialize: grpc.deserialize<transcription_pb.DiscordOpusPacketList>;
+    responseSerialize: grpc.serialize<transcription_pb.TranscribedText>;
+    responseDeserialize: grpc.deserialize<transcription_pb.TranscribedText>;
 }
 
 export const TranscriptionService: ITranscriptionService;
 
 export interface ITranscriptionServer extends grpc.UntypedServiceImplementation {
-    transcriptionBiStreams: grpc.handleBidiStreamingCall<transcription_pb.VoiceAudio, transcription_pb.transcribedText>;
+    transcriptionBiStreams: grpc.handleBidiStreamingCall<transcription_pb.DiscordOpusPacketList, transcription_pb.TranscribedText>;
 }
 
 export interface ITranscriptionClient {
-    transcriptionBiStreams(): grpc.ClientDuplexStream<transcription_pb.VoiceAudio, transcription_pb.transcribedText>;
-    transcriptionBiStreams(options: Partial<grpc.CallOptions>): grpc.ClientDuplexStream<transcription_pb.VoiceAudio, transcription_pb.transcribedText>;
-    transcriptionBiStreams(metadata: grpc.Metadata, options?: Partial<grpc.CallOptions>): grpc.ClientDuplexStream<transcription_pb.VoiceAudio, transcription_pb.transcribedText>;
+    transcriptionBiStreams(): grpc.ClientDuplexStream<transcription_pb.DiscordOpusPacketList, transcription_pb.TranscribedText>;
+    transcriptionBiStreams(options: Partial<grpc.CallOptions>): grpc.ClientDuplexStream<transcription_pb.DiscordOpusPacketList, transcription_pb.TranscribedText>;
+    transcriptionBiStreams(metadata: grpc.Metadata, options?: Partial<grpc.CallOptions>): grpc.ClientDuplexStream<transcription_pb.DiscordOpusPacketList, transcription_pb.TranscribedText>;
 }
 
 export class TranscriptionClient extends grpc.Client implements ITranscriptionClient {
     constructor(address: string, credentials: grpc.ChannelCredentials, options?: Partial<grpc.ClientOptions>);
-    public transcriptionBiStreams(options?: Partial<grpc.CallOptions>): grpc.ClientDuplexStream<transcription_pb.VoiceAudio, transcription_pb.transcribedText>;
-    public transcriptionBiStreams(metadata?: grpc.Metadata, options?: Partial<grpc.CallOptions>): grpc.ClientDuplexStream<transcription_pb.VoiceAudio, transcription_pb.transcribedText>;
+    public transcriptionBiStreams(options?: Partial<grpc.CallOptions>): grpc.ClientDuplexStream<transcription_pb.DiscordOpusPacketList, transcription_pb.TranscribedText>;
+    public transcriptionBiStreams(metadata?: grpc.Metadata, options?: Partial<grpc.CallOptions>): grpc.ClientDuplexStream<transcription_pb.DiscordOpusPacketList, transcription_pb.TranscribedText>;
 }

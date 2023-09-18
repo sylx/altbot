@@ -20,15 +20,26 @@ from grpc_reflection.v1alpha import reflection
 from services.transcription import Transcription
 from services.tts import Tts
 
+
+import asyncio
+import concurrent.futures
+import signal
+
 from memory_profiler import profile
 
-def manager():
+
+
+async def manager():
     # Serverオブジェクトを作成する
-    server = grpc.server(ThreadPoolExecutor(max_workers=2))
+    global server
+    server = grpc.aio.server()
+
+    # ThreadPoolを作成する
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=4)
 
     # Serverオブジェクトに定義したServicerクラスを登録する
-    transcription_pb2_grpc.add_TranscriptionServicer_to_server(Transcription(), server)
-    tts_pb2_grpc.add_TtsServicer_to_server(Tts(), server)
+    transcription_pb2_grpc.add_TranscriptionServicer_to_server(Transcription(pool), server)
+    tts_pb2_grpc.add_TtsServicer_to_server(Tts(pool), server)
 
     # [追記] リフレクション登録
     SERVICE_NAMES = (
@@ -42,10 +53,9 @@ def manager():
     server.add_insecure_port("[::]:1234")
     
     # 待ち受けを開始する
-    server.start()
-
-    # 待ち受け終了後の後処理を実行する
-    server.wait_for_termination()
+    await server.start()
+    print("gRPC server started on port 1234")
+    await server.wait_for_termination()
 
 if __name__ == "__main__":
-    manager()
+    asyncio.run(manager())

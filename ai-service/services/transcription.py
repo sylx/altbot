@@ -1,11 +1,15 @@
-from services.whisper_online import *
+from faster_whisper import WhisperModel
+from discord.opus import Decoder
 import numpy as np
 import soundfile as sf
 import librosa
 import io
-from services.opus_decoder import Decoder
+import asyncio
+
 import transcription_pb2
 import transcription_pb2_grpc
+
+from libs.vad import VAD
 
 from memory_profiler import profile
 
@@ -17,66 +21,79 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
     context引数にはRPCに関する情報を含むオブジェクトが渡される
     """
    
-    def __init__(self) -> None:
+    def __init__(self,pool) -> None:
         super().__init__()
-        self.asr = FasterWhisperASR(modelsize="small", lan="ja", cache_dir=".model_cache", model_dir=None)
-        self.online = {}
+        self.model=WhisperModel(
+            "base",
+            device="cuda",
+            compute_type="float32",
+            download_root="./.model_cache"
+        )
+        self.pool = pool
         self.decoder = Decoder()
-        self._warmup()
-
-   
-    def _warmup(self):
-        online = self.getASRProcessor("system")
-        online.insert_audio_chunk(np.zeros(16000))
-        online.process_iter()
-        online.finish()
+        self.vad = VAD(48000,20,200,2)
+        self.min_speech_sec = 1
+        self.index = 0
+    
+    def decodePacket(self,packet):
+        chunks = []
+        pcm = self.decoder.decode(packet.data)
+        # pcmを1chにする
+        pcm = np.frombuffer(pcm,dtype=np.int16)
+        pcm = pcm.reshape(-1,2)[:,0].tobytes()
         
-    def getASRProcessor(self,speaker_id):
-        if speaker_id in self.online:
-            return self.online[speaker_id]
-        else:
-            self.online[speaker_id] = OnlineASRProcessor(self.asr,create_tokenizer("ja"))
-            return self.online[speaker_id]
+        self.vad.addFrame(pcm,packet.timestamp)
+        if(self.vad.countFrames() > 50):
+            segments=self.vad.getSpeech()
+            if segments is not None:
+                for i, chunk in enumerate(segments):
+                    print(f"found speech {len(chunk[0])} {chunk[1]}")
+                    chunks.append(chunk)
+                self.vad.clearFrames()
+        return chunks           
 
+    async def TranscriptionBiStreams(self, request_iterator, context):
+        audio_buffer = []
+        async for request in request_iterator:
+            packets = request.packets            
+            if len(packets) > 0:
+                speaker_id = packets[0].speaker_id                
+                for packet in packets:
+                    chunks = await asyncio.get_running_loop().run_in_executor(self.pool,self.decodePacket,packet)
+                    if len(chunks) == 0:
+                        continue
+                    for chunk in chunks:
+                        audio_buffer.append(chunk[0])
+                        start_timestamp = audio_buffer[0][1]
+                        # audio を　WAVファイルとして保存する
+                        # sf.SoundFile(f"server_recv_{self.index}.wav",mode='w',format='WAV',subtype='PCM_16',channels=1,samplerate=48000).write(np.frombuffer(audio,dtype=np.int16))
 
-   
-    def TranscriptionBiStreams(self, request_iterator, context):
-        # リクエストを受け取る
-        online = None
-        last_speaker_id = None
-        for request in request_iterator:
-            audio = request.audio
-            print(f"received {len(audio)} bytes")
-            sf_file = sf.SoundFile(io.BytesIO(audio),mode='r',format='raw',subtype='PCM_16',channels=1,samplerate=16000)
-            # to ndarray
-            audio,_ = librosa.load(sf_file,sr=16000)
-            #librosa.util.normalize(audio)
-            # audio は opus でエンコードされた音声データのバイナリ
-#            audio = bytes(audio)
-#            audio = self.decoder.decode(audio)
-#            sf_file = sf.SoundFile(io.BytesIO(audio),mode='r')
-#            audio,_ = librosa.load(sf_file,sr=16000)
+                        print(f"speaker_id: {speaker_id}")
+                        # concat audio buffer
+                        segments, info = await asyncio.get_running_loop().run_in_executor(self.pool,self.transcribe,b''.join(audio_buffer))
+                        
+                        for segment in segments:
+                            print("[%.2fs -> %.2fs] %s" % (segment.start, segment.end, segment.text))
+                            yield transcription_pb2.TranscribedText(begin=start_timestamp+int(segment.start*1000),end=start_timestamp+int(segment.end*1000),
+                                                                    text=segment.text,speaker_id=speaker_id)
+                        self.index += 1
+                        if len(audio_buffer) > 3:
+                            audio_buffer=audio_buffer[1:]
 
+            if request.is_final:
+                break
 
-            print(f"decoded {len(audio)} bytes")
-            out = []
-            out.append(audio)
-            np.concatenate(out)
-            online=self.getASRProcessor(request.speaker_id)
-            last_speaker_id = request.speaker_id
-            online.insert_audio_chunk(out)
-            o = online.process_iter()            
-            if o[0] is not None:
-                # 音声データを文字列に変換する
-                # 音声データを文字列に変換した結果を返す            
-                yield transcription_pb2.transcribedText(begin=int(o[0]*1000), end=int(o[1]*1000), speaker_id=request.speaker_id, text=o[2])
         #on close
-        if online:
-            o=online.finish()
-            if o[0] is not None:
-                # 音声データを文字列に変換する
-                # 音声データを文字列に変換した結果を返す
-                yield transcription_pb2.transcribedText(begin=int(o[0]*1000), end=int(o[1]*1000), speaker_id=last_speaker_id, text=o[2])
+        self.vad.terminate()
+        print("terminated")
+    
+    def transcribe(self,pcm):
+        # soundfileとlibrosaを使ってpcmを16000Hzのndarrayに変換する
+        soundfile=sf.SoundFile(io.BytesIO(pcm),mode='r',format='RAW',subtype='PCM_16',channels=1,samplerate=48000)
+        audio,_ = librosa.load(soundfile,sr=16000,mono=True)
+        # 16000Hzのfloat32の無音(0)のndarrayを作成してaudioの前後に挿入する
+        audio = np.concatenate([np.zeros(16000,dtype=np.float32),audio,np.zeros(16000,dtype=np.float32)])
 
+        return self.model.transcribe(audio,beam_size=3,language="ja",vad_filter=True,temperature=0,best_of=2)
 
         

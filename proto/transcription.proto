@@ -2,7 +2,7 @@ syntax = "proto3";
 package AiService;
 
 service Transcription {
-	rpc TranscriptionBiStreams (stream VoiceAudio) returns (stream transcribedText);
+	rpc TranscriptionBiStreams (stream DiscordOpusPacketList) returns (stream TranscribedText);
 }
 
 message VoiceAudio {
@@ -10,7 +10,18 @@ message VoiceAudio {
 	bytes audio = 2;
 }
 
-message transcribedText {
+message DiscordOpusPacket {
+	int64 timestamp = 1;
+	string speaker_id = 2;
+	bytes data = 3;
+}
+
+message DiscordOpusPacketList {
+	repeated DiscordOpusPacket packets = 1;
+	bool is_final = 2;
+}
+
+message TranscribedText {
 	int64 begin = 1;
 	int64 end = 2;
 	string speaker_id = 3;
