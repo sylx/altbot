@@ -1,5 +1,4 @@
 from pathlib import Path
-import sys
 
 from MoeGoe.MoeGoe import *
 import numpy as np
@@ -9,10 +8,26 @@ import io
 
 import tts_pb2
 import tts_pb2_grpc
-import torch
+
 from memory_profiler import profile
 dev = "cuda:0"
 import asyncio
+
+from libs.reverb import SchroederReverb
+
+from scipy.signal import butter, lfilter
+
+def butter_lowpass(cutoff, fs, order=5):
+    nyquist = 0.5 * fs
+    normal_cutoff = cutoff / nyquist
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
+    return b, a
+
+def butter_lowpass_filter(data, cutoff, fs, order=5):
+    b, a = butter_lowpass(cutoff, fs, order=order)
+    y = lfilter(b, a, data)
+    return y
+
 
 class Tts(tts_pb2_grpc.TtsServicer):
    
@@ -37,6 +52,14 @@ class Tts(tts_pb2_grpc.TtsServicer):
         _ = self.net_g_ms.eval()
         self.speaker_id = 0
         utils.load_checkpoint(model, self.net_g_ms)
+        # reverb
+        self.schroeder_reverb = SchroederReverb(
+            24000,
+            gain_direct = 1.0,
+            stage_flg = {
+                "comb": True,
+                "ap":   False,
+            })
 
     async def SpeakStream(self, request, context):
         # リクエストを受け取る
@@ -68,7 +91,17 @@ class Tts(tts_pb2_grpc.TtsServicer):
                                 noise_scale_w=noise_scale_w, length_scale=length_scale)[0][0, 0].data.cpu().float().numpy()
             # convert sample rate to 24000 using scipy
             audio = audio.astype(np.float32)
-            audio = librosa.resample(audio, orig_sr=22050, target_sr=24000) 
+            audio = librosa.resample(audio, orig_sr=22050, target_sr=24000)
+
+            # 3秒ほど伸ばす
+            audio = np.concatenate([audio,np.zeros(24000*3,dtype=np.float32)])
+
+            # PCMデータにリバーブをかける
+            audio = self.schroeder_reverb.filt(audio)
+
+            # apply high cut filter
+            audio = butter_lowpass_filter(audio, 5500,24000)
+
 
             f = io.BytesIO() # create a memory file
             sf.write(f, audio, 24000, format='OGG', subtype='OPUS') # write audio data to memory file

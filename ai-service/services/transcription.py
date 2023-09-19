@@ -53,7 +53,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         return chunks           
 
     async def TranscriptionBiStreams(self, request_iterator, context):
-        audio_buffer = []
+        last_chunk = None
         async for request in request_iterator:
             packets = request.packets            
             if len(packets) > 0:
@@ -63,22 +63,31 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
                     if len(chunks) == 0:
                         continue
                     for chunk in chunks:
-                        audio_buffer.append(chunk[0])
-                        start_timestamp = audio_buffer[0][1]
+                        audio = chunk[0]
+                        start_timestamp = chunk[1]
+
+                        if last_chunk is not None:
+                            print (f"last_chunk before {start_timestamp - last_chunk[1]}msec")
+                        # 前回結果から1秒未満の間隔であれば結合する
+                        if last_chunk is not None and last_chunk[1] + 1000 > start_timestamp:
+                            silence = np.zeros(48 * (start_timestamp - last_chunk[1]) ,dtype=np.int16).tobytes()
+                            audio = last_chunk[0] + silence + audio
+                            start_timestamp = last_chunk[1]
+                            print(f"concat {len(audio)}")
+
                         # audio を　WAVファイルとして保存する
                         # sf.SoundFile(f"server_recv_{self.index}.wav",mode='w',format='WAV',subtype='PCM_16',channels=1,samplerate=48000).write(np.frombuffer(audio,dtype=np.int16))
 
                         print(f"speaker_id: {speaker_id}")
-                        # concat audio buffer
-                        segments, info = await asyncio.get_running_loop().run_in_executor(self.pool,self.transcribe,b''.join(audio_buffer))
-                        
+
+                        segments, info = await asyncio.get_running_loop().run_in_executor(self.pool,self.transcribe,audio)
+
                         for segment in segments:
                             print("[%.2fs -> %.2fs] %s" % (segment.start, segment.end, segment.text))
                             yield transcription_pb2.TranscribedText(begin=start_timestamp+int(segment.start*1000),end=start_timestamp+int(segment.end*1000),
                                                                     text=segment.text,speaker_id=speaker_id)
                         self.index += 1
-                        if len(audio_buffer) > 3:
-                            audio_buffer=audio_buffer[1:]
+                        last_chunk = chunk
 
             if request.is_final:
                 break
@@ -94,6 +103,6 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         # 16000Hzのfloat32の無音(0)のndarrayを作成してaudioの前後に挿入する
         audio = np.concatenate([np.zeros(16000,dtype=np.float32),audio,np.zeros(16000,dtype=np.float32)])
 
-        return self.model.transcribe(audio,beam_size=3,language="ja",vad_filter=True,temperature=0,best_of=2)
+        return self.model.transcribe(audio,beam_size=3,language="ja",vad_filter=True,temperature=[0.0,0.2],best_of=2)
 
         
