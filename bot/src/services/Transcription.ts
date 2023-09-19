@@ -43,7 +43,8 @@ export class TranscriptionWriteStream extends Writable{
         }
         let err: Error | null = null
         this.packetList.setIsFinal(is_final)
-        console.log("flush",is_final ? "final" : "",this.packetList.getPacketsList().length,"packets")
+        //console.log("flush",is_final ? "final" : "",this.packetList.getPacketsList().length,"packets")
+        process.stdout.write(is_final ? "!" : ".")
         if(!this.api_bi_stream.write(this.packetList)){
             //err = new Error("write error")
             console.error("write error")

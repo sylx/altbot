@@ -38,7 +38,7 @@ export async function listen(connection: VoiceConnection,user: User,member: Guil
             api_stream.on("error", (err) => {
             console.error(err)
             })
-            .on("data", (response : transcribedText) => {
+            .on("data", (response : TranscribedText) => {
                 console.log("from server",response.toObject())
                 const text = response.getText()
                 console.log(`${member.displayName} : ${text}`)
