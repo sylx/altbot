@@ -28,10 +28,12 @@ import signal
 from memory_profiler import profile
 
 
+_cleanup_coroutines = []
 
-async def manager():
+async def serve():
     # Serverオブジェクトを作成する
     global server
+    global _cleanup_coroutines
     server = grpc.aio.server()
 
     # ThreadPoolを作成する
@@ -55,7 +57,29 @@ async def manager():
     # 待ち受けを開始する
     await server.start()
     print("gRPC server started on port 1234")
-    await server.wait_for_termination()
+
+    async def server_graceful_shutdown():
+        print("Starting graceful shutdown...")
+        # Shuts down the server with 0 seconds of grace period. During the
+        # grace period, the server won't accept new connections and allow
+        # existing RPCs to continue within the grace period.
+        await server.stop(5)
+
+    _cleanup_coroutines.append(server_graceful_shutdown())
+
+    try:
+        await server.wait_for_termination()
+    except KeyboardInterrupt:
+        # Shuts down the server with 0 seconds of grace period. During the
+        # grace period, the server won't accept new connections and allow
+        # existing RPCs to continue within the grace period.
+        await server.stop(0)
+    await server.wait_for_termination()  
 
 if __name__ == "__main__":
-    asyncio.run(manager())
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(serve())
+    finally:
+        loop.run_until_complete(*_cleanup_coroutines)
+        loop.close()
