@@ -74,6 +74,7 @@ export class VoiceChat {
         this.connection?.destroy()
         this.connection=null
         this.channel=null
+        this.emitter.emit("disconnect")
     }
 
     async startListen() : Promise<void>{
@@ -114,6 +115,7 @@ export class VoiceChat {
                     console.log("reconnected!")
                 } catch (error) {
                     console.error(error)
+                    this.leave()
                     throw new Error("disconnected and reconnecting was failed")
                 }
             }

@@ -59,7 +59,7 @@ export class Tts {
 
 
     async speak(text: string) : Promise<void>{
-        if(this.voiceChat.getConnection() === null){
+        if(!this.voiceChat.isEnable()){
             throw new Error("not connected voice channel")
         }
         const req = new TtsSpeakRequest()

@@ -1,4 +1,4 @@
-import { GuildMember, User } from "discord.js"
+import { GuildMember, Message, User } from "discord.js"
 import { VoiceConnection,EndBehaviorType } from "@discordjs/voice";
 import { TranscribedText } from "../../../grpc/transcription_pb"
 import { Logger } from "@services"
@@ -14,6 +14,14 @@ type ListeningStatus = {
 }
 
 let listeningStatus: {[key: string]: ListeningStatus} = {}
+
+export interface TranscribedData{
+    id: string,
+    timestamp: number,
+    member: GuildMember,
+    text: string,
+    written: Message | undefined,
+}
 
 export async function listen(connection: VoiceConnection,member: GuildMember,emitter: EventEmitter){
     const user = member.user
@@ -45,7 +53,8 @@ export async function listen(connection: VoiceConnection,member: GuildMember,emi
                 const text = response.getText()
                 console.log(`${member.displayName} : ${text}`)
                 emitter.emit("transcribed",{
-                    timestamp: response.getPacketTimestamp(),
+                    id: response.getPacketTimestamp(),
+                    timestamp: response.getBegin(),
                     member: member,
                     text: text
                 })
