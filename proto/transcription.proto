@@ -5,11 +5,6 @@ service Transcription {
 	rpc TranscriptionBiStreams (stream DiscordOpusPacketList) returns (stream TranscribedText);
 }
 
-message VoiceAudio {
-	string speaker_id = 1;
-	bytes audio = 2;
-}
-
 message DiscordOpusPacket {
 	int64 timestamp = 1;
 	string speaker_id = 2;
@@ -24,6 +19,7 @@ message DiscordOpusPacketList {
 message TranscribedText {
 	int64 begin = 1;
 	int64 end = 2;
-	string speaker_id = 3;
-	string text = 4;
+	int64 packet_timestamp = 3;
+	string speaker_id = 4;
+	string text = 5;
 }

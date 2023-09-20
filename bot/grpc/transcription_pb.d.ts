@@ -6,31 +6,6 @@
 
 import * as jspb from "google-protobuf";
 
-export class VoiceAudio extends jspb.Message { 
-    getSpeakerId(): string;
-    setSpeakerId(value: string): VoiceAudio;
-    getAudio(): Uint8Array | string;
-    getAudio_asU8(): Uint8Array;
-    getAudio_asB64(): string;
-    setAudio(value: Uint8Array | string): VoiceAudio;
-
-    serializeBinary(): Uint8Array;
-    toObject(includeInstance?: boolean): VoiceAudio.AsObject;
-    static toObject(includeInstance: boolean, msg: VoiceAudio): VoiceAudio.AsObject;
-    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
-    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-    static serializeBinaryToWriter(message: VoiceAudio, writer: jspb.BinaryWriter): void;
-    static deserializeBinary(bytes: Uint8Array): VoiceAudio;
-    static deserializeBinaryFromReader(message: VoiceAudio, reader: jspb.BinaryReader): VoiceAudio;
-}
-
-export namespace VoiceAudio {
-    export type AsObject = {
-        speakerId: string,
-        audio: Uint8Array | string,
-    }
-}
-
 export class DiscordOpusPacket extends jspb.Message { 
     getTimestamp(): number;
     setTimestamp(value: number): DiscordOpusPacket;
@@ -89,6 +64,8 @@ export class TranscribedText extends jspb.Message {
     setBegin(value: number): TranscribedText;
     getEnd(): number;
     setEnd(value: number): TranscribedText;
+    getPacketTimestamp(): number;
+    setPacketTimestamp(value: number): TranscribedText;
     getSpeakerId(): string;
     setSpeakerId(value: string): TranscribedText;
     getText(): string;
@@ -108,6 +85,7 @@ export namespace TranscribedText {
     export type AsObject = {
         begin: number,
         end: number,
+        packetTimestamp: number,
         speakerId: string,
         text: string,
     }

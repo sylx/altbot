@@ -58,7 +58,7 @@ class Tts(tts_pb2_grpc.TtsServicer):
             gain_direct = 1.0,
             stage_flg = {
                 "comb": True,
-                "ap":   False,
+                "ap":   True,
             })
 
     async def SpeakStream(self, request, context):

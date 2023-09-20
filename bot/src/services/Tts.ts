@@ -20,10 +20,7 @@ import { VoiceChat } from "./VoiceChat"
 @singleton()
 export class Tts {
     public client : TtsClient
-    protected player : AudioPlayer
-    protected subscription : PlayerSubscription | null = null
     protected playQueue : Array<Readable> = []
-    protected isPlaying = false
     constructor(
         @inject(delay(() => VoiceChat)) private voiceChat: VoiceChat,
     ) {
@@ -31,66 +28,39 @@ export class Tts {
             "localhost:1234",
             grpc.credentials.createInsecure()
           )
-        this.player = createAudioPlayer({
-            debug: true
-        })
     }
     getClient() : TtsClient{
         return this.client
     }
     getPlayer() : AudioPlayer{
-        return this.player
+        return this.voiceChat.getPlayer()
     }
-
     async playNextInQueue(): Promise<void> {
-        if (!this.isPlaying && this.playQueue.length > 0) {
+        console.log("playNextInQueue waiting...")
+        entersState(this.getPlayer(), AudioPlayerStatus.Idle, 2 ** 31 - 1)
+        console.log("playNextInQueue waiting done")
+        if(this.playQueue.length > 0) {
             const nextItem = this.playQueue.shift() as Readable;
-            this.isPlaying = true;
             const resource= createAudioResource(nextItem, {
                 inputType: StreamType.OggOpus,
             })
-            this.player.play(resource)
-            await entersState(this.player, AudioPlayerStatus.Playing, 5_000)
-            await entersState(this.player, AudioPlayerStatus.Idle, 2 ** 31 - 1)
-            this.isPlaying = false;
+            this.getPlayer().play(resource)
+            await entersState(this.getPlayer(), AudioPlayerStatus.Playing, 5_000)
             await this.playNextInQueue();
+        }else{
+            console.log("queue empty")
         }
     }
 
     abort() : void{
-        this.player.stop()
+        this.getPlayer().stop()
         this.playQueue=[]
-        this.isPlaying=false
     }
 
-
-    async subscribe() : Promise<void>{
-        const connection=this.voiceChat.getConnection()
-        if(connection === null) throw "yet join voice channel"
-
-        await entersState(connection, VoiceConnectionStatus.Ready, 20e3)
-        console.log("subscribe")
-        const subscription=connection.subscribe(this.player)
-        const observer = (oldState: VoiceConnectionState, newState: VoiceConnectionState) : void =>{
-            if(newState.status === VoiceConnectionStatus.Destroyed){
-                this.subscription=null
-            }
-        }
-        connection.on("stateChange", observer)
-
-        if(subscription){
-            this.subscription=subscription
-        }else{
-            throw "player subscribe error"
-        }
-    }
 
     async speak(text: string) : Promise<void>{
-        if(this.subscription === null){
-            await this.subscribe()
-        }
-        if(this.subscription?.connection){
-            await entersState(this.subscription?.connection, VoiceConnectionStatus.Ready, 3000)
+        if(this.voiceChat.getConnection() === null){
+            throw new Error("not connected voice channel")
         }
         const req = new TtsSpeakRequest()
         req.setText(text)
@@ -106,10 +76,7 @@ export class Tts {
                 const oggStream = Readable.from(buffer)
                 console.log("queue",this.playQueue.length,response.getText())
                 this.playQueue.push(oggStream)
-                // 再生中でなければ、すぐに再生を開始
-                if (!this.isPlaying) {
-                    this.playNextInQueue();
-                }                
+                this.playNextInQueue();
             }
         }).on("end", async () => {
             console.log("recieve end")

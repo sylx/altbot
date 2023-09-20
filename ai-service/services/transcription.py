@@ -84,8 +84,11 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
 
                         for segment in segments:
                             print("[%.2fs -> %.2fs] %s" % (segment.start, segment.end, segment.text))
-                            yield transcription_pb2.TranscribedText(begin=start_timestamp+int(segment.start*1000),end=start_timestamp+int(segment.end*1000),
-                                                                    text=segment.text,speaker_id=speaker_id)
+                            yield transcription_pb2.TranscribedText(begin=start_timestamp+int(segment.start*1000),
+                                                                    end=start_timestamp+int(segment.end*1000),
+                                                                    packet_timestamp=start_timestamp,
+                                                                    text=segment.text,
+                                                                    speaker_id=speaker_id)
                         self.index += 1
                         last_chunk = chunk
 
