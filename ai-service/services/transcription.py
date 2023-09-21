@@ -24,7 +24,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
     def __init__(self,pool) -> None:
         super().__init__()
         self.model=WhisperModel(
-            "base",
+            "medium",
             device="cuda",
             compute_type="float32",
             download_root="./.model_cache"
@@ -66,28 +66,32 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
                         audio = chunk[0]
                         start_timestamp = chunk[1]
 
-                        if last_chunk is not None:
-                            print (f"last_chunk before {start_timestamp - last_chunk[1]}msec")
-                        # 前回結果から1秒未満の間隔であれば結合する
-                        if last_chunk is not None and last_chunk[1] + 1000 > start_timestamp:
-                            silence = np.zeros(48 * (start_timestamp - last_chunk[1]) ,dtype=np.int16).tobytes()
-                            audio = last_chunk[0] + silence + audio
-                            start_timestamp = last_chunk[1]
-                            print(f"concat {len(audio)}")
-
+                        # 前回結果の末尾から1秒未満の間隔であれば結合したchunkを作成する
+                        if last_chunk is not None and last_chunk[1] + last_chunk[2] + 1000 > start_timestamp:
+                            chunk = [last_chunk[0] + audio,last_chunk[1],last_chunk[2] + chunk[2]]
+                            print(f"concat last_chunk")
+                            audio = chunk[0]
+                            start_timestamp = chunk[1]
+                        
                         # audio を　WAVファイルとして保存する
                         # sf.SoundFile(f"server_recv_{self.index}.wav",mode='w',format='WAV',subtype='PCM_16',channels=1,samplerate=48000).write(np.frombuffer(audio,dtype=np.int16))
 
-                        print(f"speaker_id: {speaker_id}")
-
                         segments, info = await asyncio.get_running_loop().run_in_executor(self.pool,self.transcribe,audio)
+                        segments = list(segments) # generatorをlistに変換する
 
-                        for segment in segments:
-                            print("[%.2fs -> %.2fs] %s" % (segment.start, segment.end, segment.text))
-                            yield transcription_pb2.TranscribedText(begin=start_timestamp+int(segment.start*1000),
-                                                                    end=start_timestamp+int(segment.end*1000),
+                        if len(segments) > 0:
+                            # debug dump
+                            for segment in segments:
+                                print(f"transcribed {len(segments)}segments {segment.start} {segment.end} {segment.text}")
+
+                            first_segment = segments[0]
+                            last_segment = segments[-1]
+
+                            whole_text = ''.join([s.text for s in segments])
+                            yield transcription_pb2.TranscribedText(begin=start_timestamp+int(first_segment.start*1000),
+                                                                    end=start_timestamp+int(last_segment.end*1000),
                                                                     packet_timestamp=start_timestamp,
-                                                                    text=segment.text,
+                                                                    text=whole_text,
                                                                     speaker_id=speaker_id)
                         self.index += 1
                         last_chunk = chunk

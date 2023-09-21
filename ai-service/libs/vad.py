@@ -110,7 +110,7 @@ class VAD():
                 if num_unvoiced > 0.9 * ring_buffer.maxlen:
                     sys.stdout.write('-(%0.2f)' % (frame.timestamp + frame.duration))
                     triggered = False
-                    yield [b''.join([f.bytes for f in voiced_frames]),voiced_frames[0].timestamp]
+                    yield [b''.join([f.bytes for f in voiced_frames]),voiced_frames[0].timestamp,len(voiced_frames)*self.frame_duration_ms]
                     ring_buffer.clear()
                     voiced_frames = []
         if triggered:
@@ -119,4 +119,4 @@ class VAD():
         # If we have any leftover voiced audio when we run out of input,
         # yield it.
         if voiced_frames:
-            yield [b''.join([f.bytes for f in voiced_frames]),voiced_frames[0].timestamp]
+            yield [b''.join([f.bytes for f in voiced_frames]),voiced_frames[0].timestamp,len(voiced_frames)*self.frame_duration_ms]
