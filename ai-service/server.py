@@ -4,26 +4,18 @@ import sys
 from pathlib import Path
 sys.path.append(f'{Path(__file__).parent}/MoeGoe')
 
-# gRPCのサーバー実装ではThreadPoolを利用する
-from concurrent.futures import ThreadPoolExecutor
-
-# 「grpc」パッケージと、grpc_tools.protocによって生成したパッケージをimportする
 import grpc
 import transcription_pb2
 import transcription_pb2_grpc
 import tts_pb2
 import tts_pb2_grpc
-
-# grpc reflection用の追加ライブラリ
 from grpc_reflection.v1alpha import reflection
 
 from services.transcription import Transcription
 from services.tts import Tts
 
-
 import asyncio
 import concurrent.futures
-import signal
 
 from memory_profiler import profile
 
