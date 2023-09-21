@@ -56,10 +56,10 @@ async def serve():
     
     # 待ち受けを開始する
     await server.start()
-    print("gRPC server started on port 1234")
+    print("gRPC server started on port 1234",file=sys.stderr)
 
     async def server_graceful_shutdown():
-        print("Starting graceful shutdown...")
+        print("Starting graceful shutdown...", file=sys.stderr)
         # Shuts down the server with 0 seconds of grace period. During the
         # grace period, the server won't accept new connections and allow
         # existing RPCs to continue within the grace period.
@@ -77,6 +77,7 @@ async def serve():
     await server.wait_for_termination()  
 
 if __name__ == "__main__":
+    print("Starting gRPC server...", file=sys.stderr)
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(serve())
