@@ -42,7 +42,7 @@ class SchroederReverb():
         self.comb_tau_list = [
             self.round(self.sr*d*0.001) for d in comb_delay_list
         ]
-        print(f"self.comb_tau_list: {self.comb_tau_list}")
+        #print(f"self.comb_tau_list: {self.comb_tau_list}")
         
         self.parallel_comb_coefs = []
         for k, tau in enumerate(self.comb_tau_list):
@@ -58,7 +58,7 @@ class SchroederReverb():
         self.cap_tau_list = [
             self.round(self.sr*d*0.001) for d in cap_delay_list
         ]
-        print(f"self.cap_tau_list: {self.cap_tau_list}")
+        #print(f"self.cap_tau_list: {self.cap_tau_list}")
         
         self.cascaded_ap_coefs = []
         for k, tau in enumerate(self.cap_tau_list):
@@ -77,7 +77,7 @@ class SchroederReverb():
         y = np.zeros(x.shape)
         
         if self.stage_flg["comb"]:
-            print("# 1st stage: parallel comb filters ")
+            #print("# 1st stage: parallel comb filters ")
             n_comb = len(self.parallel_comb_coefs)
             for k, (comb_b, comb_a) in enumerate(self.parallel_comb_coefs):
                 y[:] += lfilter(comb_b, comb_a, x)
@@ -86,7 +86,7 @@ class SchroederReverb():
         
         
         if self.stage_flg["ap"]:
-            print("# 2nd stage: cascaded ap filters")
+            #print("# 2nd stage: cascaded ap filters")
             for k, (ap_b, ap_a) in enumerate(self.cascaded_ap_coefs):
                 y[:] = lfilter(ap_b, ap_a, y)
         else:
