@@ -12,6 +12,7 @@ import tts_pb2_grpc
 from memory_profiler import profile
 dev = "cuda:0"
 import asyncio
+import threading
 
 from libs.reverb import SchroederReverb
 
@@ -50,7 +51,7 @@ class Tts(tts_pb2_grpc.TtsServicer):
             emotion_embedding=emotion_embedding,
             **self.hps_ms.model).to(dev)
         _ = self.net_g_ms.eval()
-        self.speaker_id = 0
+        self.speaker_id = 24
         utils.load_checkpoint(model, self.net_g_ms)
         # reverb
         self.schroeder_reverb = SchroederReverb(
@@ -60,29 +61,57 @@ class Tts(tts_pb2_grpc.TtsServicer):
                 "comb": True,
                 "ap":   True,
             })
-
+    
     async def SpeakStream(self, request, context):
-        # リクエストを受け取る
+        # リクエストを受け取る        
         wholeText = request.text
-        print(f"received {wholeText}")
-        sentences = re.split(r'[。．！？\n]', wholeText)
+        # 分割する
+        sentences = self.splitText(wholeText,8)
+        # 音声データを生成する
         for text in sentences:
-            # 前後の空白を削除する
-            text = text.strip()
-            if len(text) == 0:
-                continue
-            
-            # 音声データを生成する
             audio = await asyncio.get_running_loop().run_in_executor(self.pool, self.generateSpeech, text)
             yield tts_pb2.TtsSpeakResponse(audio=audio,text=text)
 
+    def splitText(self, wholeText,minLength=10):
+        ret = []
+        sentences = re.split(r'([。．！？\n])', wholeText)
+        text = ""
+        for i, sentence in enumerate(sentences):
+            # 前後の空白を削除する
+            sentence = sentence.strip()
+            if len(sentence) == 0:
+                continue
+            # 句読点を残す
+            if i % 2 == 0:
+                text += sentence
+                continue
+            # textが短すぎる場合、次の要素と結合する
+            if len(text + sentence) < minLength:
+                text += sentence
+                continue
+            # 音声データを生成する
+            ret.append(text + sentence)
+            text = ""
+        # 最後の要素を処理する
+        if len(text) > 0:
+            ret.append(text)
+        return ret
+
+
     def generateSpeech(self,text):
+        threading.current_thread().name = "generateSpeech"
+        print(f"generateSpeech {text}")
         length_scale, text = get_label_value(text, 'LENGTH', 1, 'length scale')
         noise_scale, text = get_label_value(text, 'NOISE', 0.667, 'noise scale')
         noise_scale_w, text = get_label_value(text, 'NOISEW', 0.8, 'deviation of noise')
         cleaned, text = get_label(text, 'CLEANED')
         stn_tst = get_text(text, self.hps_ms, cleaned=cleaned)
         with no_grad():
+            # 再入禁止
+            lock = threading.Lock()
+            if lock.acquire(blocking=True,timeout=10) == False:
+                raise Exception("lock timeout in generateSpeech")
+            
             x_tst = stn_tst.unsqueeze(0).to(dev)
             x_tst_lengths = LongTensor([stn_tst.size(0)]).to(dev)
             sid = LongTensor([self.speaker_id]).to(dev)
@@ -107,7 +136,9 @@ class Tts(tts_pb2_grpc.TtsServicer):
             sf.write(f, audio, 24000, format='OGG', subtype='OPUS') # write audio data to memory file
             # return ogg opus audio data
             print(f"encoded {len(audio)} bytes for {text}")
+            lock.release()
             return f.getvalue()
+
 
     def GetSpeakers(self, request, context):
         list = tts_pb2.TtsSpeakerInfoList()
