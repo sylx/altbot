@@ -13,6 +13,8 @@ from libs.vad import VAD
 
 from memory_profiler import profile
 
+import threading
+
 class Transcription(transcription_pb2_grpc.TranscriptionServicer):
     """
     サービス定義から生成されたクラスを継承して、
@@ -24,10 +26,10 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
     def __init__(self,pool) -> None:
         super().__init__()
         self.model=WhisperModel(
-            "medium",
+            "small",
             device="cuda",
             compute_type="float32",
-            download_root="./.model_cache"
+            download_root="./.model_cache",
         )
         self.pool = pool
         self.decoder = Decoder()
@@ -104,12 +106,19 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         print("terminated")
     
     def transcribe(self,pcm):
-        # soundfileとlibrosaを使ってpcmを16000Hzのndarrayに変換する
-        soundfile=sf.SoundFile(io.BytesIO(pcm),mode='r',format='RAW',subtype='PCM_16',channels=1,samplerate=48000)
-        audio,_ = librosa.load(soundfile,sr=16000,mono=True)
-        # 16000Hzのfloat32の無音(0)のndarrayを作成してaudioの前後に挿入する
-        audio = np.concatenate([np.zeros(16000,dtype=np.float32),audio,np.zeros(16000,dtype=np.float32)])
-
-        return self.model.transcribe(audio,beam_size=3,language="ja",vad_filter=True,temperature=[0.0,0.2],best_of=2)
+        threading.current_thread().name = "transcribe"
+        lock = threading.Lock()
+        if lock.acquire(blocking=True,timeout=300):
+            # soundfileとlibrosaを使ってpcmを16000Hzのndarrayに変換する
+            soundfile=sf.SoundFile(io.BytesIO(pcm),mode='r',format='RAW',subtype='PCM_16',channels=1,samplerate=48000)
+            audio,_ = librosa.load(soundfile,sr=16000,mono=True)
+            # 16000Hzのfloat32の無音(0)のndarrayを作成してaudioの前後に挿入する
+            audio = np.concatenate([np.zeros(16000,dtype=np.float32),audio,np.zeros(16000,dtype=np.float32)])
+            segements,info = self.model.transcribe(audio,beam_size=3,language="ja",vad_filter=True,temperature=[0.0,0.2],best_of=2)
+            lock.release()
+            return segements,info
+        else:
+            print("lock timeout")
+            return [],None
 
         

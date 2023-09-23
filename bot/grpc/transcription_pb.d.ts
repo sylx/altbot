@@ -38,6 +38,8 @@ export class DiscordOpusPacketList extends jspb.Message {
     addPackets(value?: DiscordOpusPacket, index?: number): DiscordOpusPacket;
     getSpeakerId(): string;
     setSpeakerId(value: string): DiscordOpusPacketList;
+    getPrompt(): string;
+    setPrompt(value: string): DiscordOpusPacketList;
     getIsFinal(): boolean;
     setIsFinal(value: boolean): DiscordOpusPacketList;
 
@@ -55,6 +57,7 @@ export namespace DiscordOpusPacketList {
     export type AsObject = {
         packetsList: Array<DiscordOpusPacket.AsObject>,
         speakerId: string,
+        prompt: string,
         isFinal: boolean,
     }
 }

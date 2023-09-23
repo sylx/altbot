@@ -313,7 +313,8 @@ proto.AiService.DiscordOpusPacketList.toObject = function(includeInstance, msg) 
     packetsList: jspb.Message.toObjectList(msg.getPacketsList(),
     proto.AiService.DiscordOpusPacket.toObject, includeInstance),
     speakerId: jspb.Message.getFieldWithDefault(msg, 2, ""),
-    isFinal: jspb.Message.getBooleanFieldWithDefault(msg, 3, false)
+    prompt: jspb.Message.getFieldWithDefault(msg, 3, ""),
+    isFinal: jspb.Message.getBooleanFieldWithDefault(msg, 4, false)
   };
 
   if (includeInstance) {
@@ -360,6 +361,10 @@ proto.AiService.DiscordOpusPacketList.deserializeBinaryFromReader = function(msg
       msg.setSpeakerId(value);
       break;
     case 3:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setPrompt(value);
+      break;
+    case 4:
       var value = /** @type {boolean} */ (reader.readBool());
       msg.setIsFinal(value);
       break;
@@ -407,10 +412,17 @@ proto.AiService.DiscordOpusPacketList.serializeBinaryToWriter = function(message
       f
     );
   }
+  f = message.getPrompt();
+  if (f.length > 0) {
+    writer.writeString(
+      3,
+      f
+    );
+  }
   f = message.getIsFinal();
   if (f) {
     writer.writeBool(
-      3,
+      4,
       f
     );
   }
@@ -474,11 +486,29 @@ proto.AiService.DiscordOpusPacketList.prototype.setSpeakerId = function(value) {
 
 
 /**
- * optional bool is_final = 3;
+ * optional string prompt = 3;
+ * @return {string}
+ */
+proto.AiService.DiscordOpusPacketList.prototype.getPrompt = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 3, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.AiService.DiscordOpusPacketList} returns this
+ */
+proto.AiService.DiscordOpusPacketList.prototype.setPrompt = function(value) {
+  return jspb.Message.setProto3StringField(this, 3, value);
+};
+
+
+/**
+ * optional bool is_final = 4;
  * @return {boolean}
  */
 proto.AiService.DiscordOpusPacketList.prototype.getIsFinal = function() {
-  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 3, false));
+  return /** @type {boolean} */ (jspb.Message.getBooleanFieldWithDefault(this, 4, false));
 };
 
 
@@ -487,7 +517,7 @@ proto.AiService.DiscordOpusPacketList.prototype.getIsFinal = function() {
  * @return {!proto.AiService.DiscordOpusPacketList} returns this
  */
 proto.AiService.DiscordOpusPacketList.prototype.setIsFinal = function(value) {
-  return jspb.Message.setProto3BooleanField(this, 3, value);
+  return jspb.Message.setProto3BooleanField(this, 4, value);
 };
 
 

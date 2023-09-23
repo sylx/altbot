@@ -12,8 +12,9 @@ message DiscordOpusPacket {
 
 message DiscordOpusPacketList {
 	repeated DiscordOpusPacket packets = 1;
-	string speaker_id = 2;	
-	bool is_final = 3;
+	string speaker_id = 2;
+	string prompt = 3;
+	bool is_final = 4;
 }
 
 message TranscriptionEvent {
