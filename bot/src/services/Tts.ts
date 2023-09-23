@@ -21,6 +21,7 @@ import { VoiceChat } from "./VoiceChat"
 export class Tts {
     public client : TtsClient
     protected playQueue : Array<Readable> = []
+    protected isPlaying : boolean = false
     constructor(
         @inject(delay(() => VoiceChat)) private voiceChat: VoiceChat,
     ) {
@@ -36,16 +37,22 @@ export class Tts {
         return this.voiceChat.getPlayer()
     }
     async playNextInQueue(): Promise<void> {
-        console.log("playNextInQueue waiting...")
-        entersState(this.getPlayer(), AudioPlayerStatus.Idle, 2 ** 31 - 1)
-        console.log("playNextInQueue waiting done")
+        if(this.isPlaying) return
         if(this.playQueue.length > 0) {
-            const nextItem = this.playQueue.shift() as Readable;
+            this.isPlaying=true
+            const nextItem = this.playQueue[0];
             const resource= createAudioResource(nextItem, {
                 inputType: StreamType.OggOpus,
             })
             this.getPlayer().play(resource)
             await entersState(this.getPlayer(), AudioPlayerStatus.Playing, 5_000)
+            await new Promise(resolve => {
+                this.getPlayer().once(AudioPlayerStatus.Idle, resolve)
+            })
+            //ここで再生が終わった
+            this.playQueue.shift()
+            this.isPlaying=false
+            console.log("playend queue",this.playQueue.length)
             await this.playNextInQueue();
         }else{
             console.log("queue empty")
@@ -58,7 +65,7 @@ export class Tts {
     }
 
 
-    async speak(text: string) : Promise<void>{
+    speak(text: string) : Promise<void>{
         if(!this.voiceChat.isEnable()){
             throw new Error("not connected voice channel")
         }
@@ -66,22 +73,27 @@ export class Tts {
         req.setText(text)
         const stream=this.client.speakStream(req)
 
-        stream.on("data", async (response : TtsSpeakResponse) => {
-            const audio = response.getAudio()
-            console.log("from server",response.getText(),audio.length)            
-            if(audio){
-                // UInt8Array to buffer
-                const buffer = Buffer.from(audio)
-                // buffer to stream
-                const oggStream = Readable.from(buffer)
-                console.log("queue",this.playQueue.length,response.getText())
-                this.playQueue.push(oggStream)
-                this.playNextInQueue();
-            }
-        }).on("end", async () => {
-            console.log("recieve end")
-        }).on("error", (err) => {
-            console.error(err)
+        return new Promise((resolve, reject) => {
+            stream.on("data", async (response : TtsSpeakResponse) => {
+                const audio = response.getAudio()
+                console.log("from server",response.getText(),audio.length)            
+                if(audio){
+                    // UInt8Array to buffer
+                    const buffer = Buffer.from(audio)
+                    // buffer to stream
+                    const oggStream = Readable.from(buffer)
+                    console.log("queue",this.playQueue.length,response.getText())
+                    this.playQueue.push(oggStream)
+                    this.playNextInQueue();
+                }
+            }).on("end", async () => {
+                console.log("recieve end")
+                await entersState(this.getPlayer(), AudioPlayerStatus.Idle, 2 ** 31 - 1)
+                resolve()
+            }).on("error", (err) => {
+                console.error(err)
+                reject(err)
+            })
         })
     }
 
