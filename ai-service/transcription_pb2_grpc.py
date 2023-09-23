@@ -17,7 +17,7 @@ class TranscriptionStub(object):
         self.TranscriptionBiStreams = channel.stream_stream(
                 '/AiService.Transcription/TranscriptionBiStreams',
                 request_serializer=transcription__pb2.DiscordOpusPacketList.SerializeToString,
-                response_deserializer=transcription__pb2.TranscribedText.FromString,
+                response_deserializer=transcription__pb2.TranscriptionEvent.FromString,
                 )
 
 
@@ -36,7 +36,7 @@ def add_TranscriptionServicer_to_server(servicer, server):
             'TranscriptionBiStreams': grpc.stream_stream_rpc_method_handler(
                     servicer.TranscriptionBiStreams,
                     request_deserializer=transcription__pb2.DiscordOpusPacketList.FromString,
-                    response_serializer=transcription__pb2.TranscribedText.SerializeToString,
+                    response_serializer=transcription__pb2.TranscriptionEvent.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -61,6 +61,6 @@ class Transcription(object):
             metadata=None):
         return grpc.experimental.stream_stream(request_iterator, target, '/AiService.Transcription/TranscriptionBiStreams',
             transcription__pb2.DiscordOpusPacketList.SerializeToString,
-            transcription__pb2.TranscribedText.FromString,
+            transcription__pb2.TranscriptionEvent.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
