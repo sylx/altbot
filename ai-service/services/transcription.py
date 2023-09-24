@@ -15,6 +15,8 @@ from memory_profiler import profile
 
 import threading
 
+import json
+
 class Transcription(transcription_pb2_grpc.TranscriptionServicer):
     """
     サービス定義から生成されたクラスを継承して、
@@ -52,18 +54,29 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
                     print(f"found speech {len(chunk[0])} {chunk[1]}")
                     chunks.append(chunk)
                 self.vad.clearFrames()
-        return chunks           
+        return chunks
+    def emit(self,eventName,eventData):
+        dataJson=json.dumps(eventData)
+        return transcription_pb2.TranscriptionEvent(
+            eventName=eventName,
+            eventData=dataJson
+        )
 
     async def TranscriptionBiStreams(self, request_iterator, context):
         last_chunk = None
         async for request in request_iterator:
-            packets = request.packets            
+            packets = request.packets
+            speaker_id = request.speaker_id
+            print(f"received {len(packets)} packets. {speaker_id}")
             if len(packets) > 0:
-                speaker_id = packets[0].speaker_id                
                 for packet in packets:
                     chunks = await asyncio.get_running_loop().run_in_executor(self.pool,self.decodePacket,packet)
                     if len(chunks) == 0:
                         continue
+                    yield self.emit("vad",{
+                        "speaker_id":speaker_id,
+                        "duration": 0
+                    })
                     for chunk in chunks:
                         audio = chunk[0]
                         start_timestamp = chunk[1]
@@ -90,11 +103,15 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
                             last_segment = segments[-1]
 
                             whole_text = ''.join([s.text for s in segments])
-                            yield transcription_pb2.TranscribedText(begin=start_timestamp+int(first_segment.start*1000),
-                                                                    end=start_timestamp+int(last_segment.end*1000),
-                                                                    packet_timestamp=start_timestamp,
-                                                                    text=whole_text,
-                                                                    speaker_id=speaker_id)
+                            yield self.emit(
+                                eventName="transcription",
+                                eventData={
+                                    "begin": start_timestamp+int(first_segment.start*1000),
+                                    "end": start_timestamp+int(last_segment.end*1000),
+                                    "packet_timestamp": start_timestamp,
+                                    "text": whole_text,
+                                    "speaker_id": speaker_id
+                            })
                         self.index += 1
                         last_chunk = chunk
 
