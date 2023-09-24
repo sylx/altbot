@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionType, Channel, CommandInteraction, VoiceChannel, ClientVoiceManager, Snowflake, ChannelType, TextBasedChannel } from "discord.js"
+import { ApplicationCommandOptionType, Channel, CommandInteraction, VoiceChannel, ClientVoiceManager, Snowflake, ChannelType, TextBasedChannel, Message } from "discord.js"
 import { Client } from "discordx"
 
 import { Discord, Guard, Slash, SlashOption } from "@decorators"
@@ -11,9 +11,11 @@ import { resolveDependency } from "@utils/functions"
 import { VoiceChat } from "../../services/VoiceChat"
 import { Tts } from "../../services/Tts"
 import { TranscribedData } from "../../utils/functions/listen"
+import { Transcription } from "src/services/Transcription"
+import { VoiceConnection } from "@discordjs/voice"
 
 
-const FORCE_OUTPUT_LOG_TIMEOUT = 5*60*1000 //5分
+const COMBINED_LOG_DURATION = 5*60*1000 //5分
 
 @Discord()
 export default class TranscribeCommand {
@@ -36,6 +38,7 @@ export default class TranscribeCommand {
 	) {
 		const db = await resolveDependency(Database)
 		const voiceChat = await resolveDependency(VoiceChat)
+		const transcription = await resolveDependency(Transcription)
 		const tts = await resolveDependency(Tts)
 		const dataRepository = db.get(Data)
 
@@ -46,23 +49,23 @@ export default class TranscribeCommand {
 			)
 			return
 		}
+
 		const targetChannel=interaction.channel
 		let timeoutAfterReceive : NodeJS.Timeout | null = null
-		voiceChat.on("transcribed",async (data: TranscribedData)=>{
+		transcription.on("transcribed",async (data: any)=>{
 			timeoutAfterReceive && clearTimeout(timeoutAfterReceive)
 			appendLog(data)
 			//ログの出力
 			outputLog(targetChannel as TextBasedChannel)
-			//5分後の予約
-			timeoutAfterReceive = setTimeout(()=>{
-				outputLog(targetChannel as TextBasedChannel)
-			},FORCE_OUTPUT_LOG_TIMEOUT)
 		})
 		voiceChat.on("disconnect",async ()=>{
 			clearLog()
 		})
 
-		await voiceChat.startListen()
+		await transcription.startListen(
+			voiceChat.getConnection() as VoiceConnection,
+			voiceChat.getChannel() as VoiceChannel)
+
 		simpleSuccessEmbed(
 			interaction,
 			"聞き取りを開始します"
@@ -99,14 +102,34 @@ function clearLog(){
 	transcribedLogs.length = 0
 }
 
+let last_msg : Message<boolean> | null = null
+let last_msg_timestamp : number | null = null
+
 async function outputLog(targetChannel?: TextBasedChannel){
 	const logToBeSent=transcribedLogs.filter(item=>!item.written)
-	//5件以上たまった or 最後のログが5分以上経過したログを書き出す
-	if(logToBeSent.length > 5 || (logToBeSent.length > 0 && Date.now() - logToBeSent[logToBeSent.length-1].timestamp > FORCE_OUTPUT_LOG_TIMEOUT)){
-		const msg = await targetChannel?.send(createLogText(logToBeSent))
-		logToBeSent.forEach(item=>{
-			item.written=msg
-		})
+	const now = Date.now()
+	if(logToBeSent.length > 0){
+		//前回からの経過時間がCOMBINED_LOG_DURATIONを超えていない場合は前回のメッセージに追記する
+		if(
+			last_msg && last_msg_timestamp && 
+			(now - last_msg_timestamp < COMBINED_LOG_DURATION)
+		){
+			await last_msg.edit(last_msg.content + "\n" + createLogText(logToBeSent))
+		}else{
+			// 新しいメッセージを作成する
+			const msg=
+				await targetChannel?.send(createLogText(logToBeSent)) as Message<boolean>
+			if(msg){
+				last_msg=msg
+				last_msg_timestamp=now
+			}
+		}
+		if(last_msg){
+			//送信済みをマーク
+			logToBeSent.forEach(log=>{
+				log.written=last_msg as Message<boolean>
+			})
+		}
 	}
 }
 

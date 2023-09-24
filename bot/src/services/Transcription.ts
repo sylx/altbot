@@ -1,19 +1,22 @@
 
 import * as grpc from "@grpc/grpc-js"
-import { GuildMember, User } from "discord.js"
+import { GuildMember, User, VoiceChannel } from "discord.js"
 import { delay, inject, singleton } from "tsyringe"
 import { TranscriptionClient } from "../../grpc/transcription_grpc_pb"
-import { VoiceAudio, TranscribedText,DiscordOpusPacket,DiscordOpusPacketList } from "../../grpc/transcription_pb"
+import { TranscriptionEvent,DiscordOpusPacket,DiscordOpusPacketList } from "../../grpc/transcription_pb"
 import { Writable } from "stream"
-import { T } from "ts-toolbelt"
+import { EndBehaviorType, VoiceConnection } from "@discordjs/voice"
+import { EventEmitter } from "events"
+import { resolveDependency } from "@utils/functions"
+import { Logger } from "./Logger"
 
 //まとめて送りつけるパケット数(1パケットの長さはだいたい20ms)
-const SEND_PACKET_NUM = 10 
+const SEND_PACKET_NUM = 10
 
 export class TranscriptionWriteStream extends Writable{
     protected packetList : DiscordOpusPacketList | null = null
     constructor(
-        protected api_bi_stream : grpc.ClientDuplexStream<DiscordOpusPacketList,TranscribedText>,
+        protected api_bi_stream : grpc.ClientDuplexStream<DiscordOpusPacketList,TranscriptionEvent>,
         protected speaker_id: string
     ){ 
         super()
@@ -25,7 +28,6 @@ export class TranscriptionWriteStream extends Writable{
         }
         const packet = new DiscordOpusPacket()
         packet.setData(chunk)
-        packet.setSpeakerId(this.speaker_id)
         // now(milliseconds)
         packet.setTimestamp(Date.now())
         this.packetList.addPackets(packet)
@@ -43,6 +45,7 @@ export class TranscriptionWriteStream extends Writable{
         }
         let err: Error | null = null
         this.packetList.setIsFinal(is_final)
+        this.packetList.setSpeakerId(this.speaker_id)
         //console.log("flush",is_final ? "final" : "",this.packetList.getPacketsList().length,"packets")
         process.stdout.write(is_final ? "!" : ".")
         if(!this.api_bi_stream.write(this.packetList)){
@@ -61,6 +64,9 @@ export class TranscriptionWriteStream extends Writable{
 @singleton()
 export class Transcription {
     public client : TranscriptionClient
+    protected emitter: EventEmitter = new EventEmitter()
+    protected api_stream : grpc.ClientDuplexStream<DiscordOpusPacketList,TranscriptionEvent> | null = null
+    protected listeningStatus : {[key: string]: boolean} = {}
     constructor(
     ) {
         this.client=new TranscriptionClient(
@@ -68,7 +74,86 @@ export class Transcription {
             grpc.credentials.createInsecure()
           )
     }
-    getClient() : TranscriptionClient{
-        return this.client
+    on(event: string, listener: (...args: any[]) => void) : void{
+        this.emitter.on(event,listener)
+    }
+    async connectApi(emitter: EventEmitter) : Promise<void>{
+        if(this.api_stream !== null) throw new Error("already connected")
+
+        this.api_stream = this.client.transcriptionBiStreams()
+        this.api_stream?.on("error", (err) => {
+            console.error(err)
+            this.api_stream = null
+        })
+        .on("data", (response : TranscriptionEvent) => {
+            console.log("from server",response.toObject())
+            try {
+                emitter.emit(
+                        response.getEventname(),
+                        JSON.parse(response.getEventdata())
+                )
+            } catch (e) {
+                console.error(e)
+            }
+        })
+        .on("end", () => {
+            console.log("api read end")
+            this.api_stream = null
+        })
+    }
+
+    async startListen(connection: VoiceConnection,channel: VoiceChannel) : Promise<void>{
+        const logger = await resolveDependency(Logger)
+        //init streams
+        try{
+            if(this.api_stream === null)
+                this.connectApi(this.emitter)
+        }catch(e){
+            logger.logError(e,"Exception")
+        }
+        const receiver = connection.receiver;
+        receiver.speaking.on('start', async (userId) => {
+            const member = channel.guild.members.cache.get(userId) as GuildMember
+            if(this.listeningStatus[userId]) return
+            if(member){
+                logger.log(`listen start ${member.displayName}(${member.user.username})`,"info")
+                this.listeningStatus[userId] = true
+                await this.listen(connection,member)
+                this.listeningStatus[userId] = false
+                logger.log(`listen end ${member.displayName}(${member.user.username})`,"info")
+            }
+        })
+    }
+    async stopListen() : Promise<void>{
+        this.api_stream?.end()
+        this.api_stream=null
+    }
+        
+    protected async listen(connection: VoiceConnection,member: GuildMember){
+        const user = member.user
+        if(this.api_stream === null) throw new Error("no connection to api")
+        const write_stream = new TranscriptionWriteStream(this.api_stream,user.id)
+
+        const logger = await resolveDependency(Logger)
+        logger.log(`speaking start ${member.displayName}(${user.username})`,"info")
+        const receiver = connection.receiver;
+        const opusStream=receiver.subscribe(user.id, {
+            end: {
+                behavior: EndBehaviorType.AfterSilence,
+                duration: 500,
+            },
+        })
+        return new Promise((resolve,reject)=>{
+            opusStream
+                .pipe(write_stream as TranscriptionWriteStream)
+                .on("finish",async ()=>{
+                    console.log("write end")
+                    resolve()
+                })
+                .on("error",(err)=>{
+                    console.error(err)
+                    reject(err)
+                })
+        }) as Promise<void>
     }
 }

@@ -8,9 +8,8 @@ import {
     AudioPlayerStatus, getVoiceConnections,
 } from "@discordjs/voice"
 
-import { Channel, VoiceChannel,GuildMember } from "discord.js"
+import { VoiceChannel } from "discord.js"
 import { Client } from "discordx"
-import { listen } from "../utils/functions/listen"
 
 import { EventEmitter } from "events"
 
@@ -46,7 +45,7 @@ export class VoiceChat {
         this.emitter.on(event,listener)
     }
 
-    async join(channel: VoiceChannel) : Promise<void>{
+    async join(channel: VoiceChannel) : Promise<VoiceConnection>{
         await this.leave()
         const connection = joinVoiceChannel({
 			adapterCreator: channel.guild.voiceAdapterCreator,
@@ -68,25 +67,14 @@ export class VoiceChat {
         })
         await this.initVoiceConnection(connection)
         this.connection=connection
-        this.channel=channel        
+        this.channel=channel
+        return connection
     }
     async leave() : Promise<void>{
         this.connection?.destroy()
         this.connection=null
         this.channel=null
         this.emitter.emit("disconnect")
-    }
-
-    async startListen() : Promise<void>{
-        if(this.connection === null) throw "yet join voice channel"
-        const connection=this.connection as VoiceConnection
-
-        connection.receiver.speaking.on('start', (userId) => {
-            const member = this.channel?.guild.members.cache.get(userId) as GuildMember
-            if (member) {
-                listen(connection, member, this.emitter)
-            }
-        })
     }
 
     protected async initVoiceConnection(conn: VoiceConnection) : Promise<void>{
