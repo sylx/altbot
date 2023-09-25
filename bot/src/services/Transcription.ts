@@ -9,6 +9,8 @@ import { EndBehaviorType, VoiceConnection } from "@discordjs/voice"
 import { EventEmitter } from "events"
 import { resolveDependency } from "@utils/functions"
 import { Logger } from "./Logger"
+import { writeFile, writeFileSync } from "fs"
+
 
 //まとめて送りつけるパケット数(1パケットの長さはだいたい20ms)
 const SEND_PACKET_NUM = 10
@@ -17,7 +19,8 @@ export class TranscriptionWriteStream extends Writable{
     protected packetList : DiscordOpusPacketList | null = null
     constructor(
         protected api_bi_stream : grpc.ClientDuplexStream<DiscordOpusPacketList,TranscriptionEvent>,
-        protected speaker_id: string
+        protected speaker_id: string,
+        protected save_to_file: string | null = null
     ){ 
         super()
     }
@@ -27,16 +30,15 @@ export class TranscriptionWriteStream extends Writable{
             this.packetList = new DiscordOpusPacketList()
         }
         const packet = new DiscordOpusPacket()
-        packet.setData(chunk)
+        packet.setData(Uint8Array.from(chunk))
         // now(milliseconds)
         packet.setTimestamp(Date.now())
         this.packetList.addPackets(packet)
         let err: Error | null = null
         if(this.packetList.getPacketsList().length >= SEND_PACKET_NUM){
             err = this._flush(false)
-            this.packetList = null
         }
-        callback(err)        
+        callback(err)
     }
 
     _flush(is_final : boolean): Error | null {
@@ -48,15 +50,27 @@ export class TranscriptionWriteStream extends Writable{
         this.packetList.setSpeakerId(this.speaker_id)
         //console.log("flush",is_final ? "final" : "",this.packetList.getPacketsList().length,"packets")
         process.stdout.write(is_final ? "!" : ".")
+        
+        // 保存する場合は、送らずクリアもしない
+        if(this.save_to_file !== null) return null
+
         if(!this.api_bi_stream.write(this.packetList)){
             //err = new Error("write error")
             console.error("write error")
         }
+        this.packetList = null
         return null
     }
 
     _final(callback: (error?: Error | null) => void): void {
         this._flush(true)
+        if(this.save_to_file !== null && this.packetList !== null){
+            console.log("write to file",this.save_to_file)
+            // this.packetListをファイルに書き出す
+            writeFileSync(this.save_to_file,
+                    Buffer.from(this.packetList.serializeBinary()),
+                    {encoding:"binary"})
+        }
         callback()
     }
 }
@@ -132,7 +146,7 @@ export class Transcription {
     protected async listen(connection: VoiceConnection,member: GuildMember){
         const user = member.user
         if(this.api_stream === null) throw new Error("no connection to api")
-        const write_stream = new TranscriptionWriteStream(this.api_stream,user.id)
+        const write_stream = new TranscriptionWriteStream(this.api_stream,user.id,`./test.${Date.now()}.bin`)
 
         const logger = await resolveDependency(Logger)
         logger.log(`speaking start ${member.displayName}(${user.username})`,"info")

@@ -11,7 +11,7 @@ import { resolveDependency } from "@utils/functions"
 import { VoiceChat } from "../../services/VoiceChat"
 import { Tts } from "../../services/Tts"
 import { TranscribedData } from "../../utils/functions/listen"
-import { Transcription } from "src/services/Transcription"
+import { Transcription } from "../../services/Transcription"
 import { VoiceConnection } from "@discordjs/voice"
 
 
