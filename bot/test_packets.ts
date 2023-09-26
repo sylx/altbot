@@ -11,26 +11,19 @@ const client = new TranscriptionClient(
     "localhost:1234",
     grpc.credentials.createInsecure()
 )
-const api_stream=client.transcriptionBiStreams()
-console.log("connect")
-console.log("read from",process.argv[process.argv.length - 1])
-const binary = fs.readFileSync(process.argv[process.argv.length - 1])
-console.log("binary",binary.length,binary.subarray(0,10))
-const packetList = DiscordOpusPacketList.deserializeBinary(binary)
 
-console.log("packetList",packetList.getPacketsList().length)
-const packets=[0,1,2,3].map(i=>{
-    return packetList.getPacketsList().map((packet : DiscordOpusPacket)=>{
+function generatePackets(filename: string): Array<any>{
+    const binary = fs.readFileSync(filename)
+    const packetList = DiscordOpusPacketList.deserializeBinary(binary)
+    return [0,1,2,3].map(i=>{
+        return packetList.getPacketsList().map((packet : DiscordOpusPacket)=>{
         return Buffer.from(packet.getData())
     })
-}).flat()
-
-console.log("packets",packets.length)
-
-const writeStream = new TranscriptionWriteStream(api_stream,"test","アルト、サムゲタン")
+    }).flat()
+}
 
 // waitを入れながら送信する
-async function send(){
+async function send(packets: Array<any>,writeStream : TranscriptionWriteStream){
     for(let p of packets){
         process.stdout.write(".")
         writeStream.write(p)
@@ -40,37 +33,49 @@ async function send(){
     writeStream.end()
 }
 
-const api_promise = new Promise((resolve,reject)=>{
-    api_stream.on("data",(response : TranscriptionEvent)=>{
-        //millisecond unix time to date(format YYYY/MM/DD hh:mm:ss.ms)
-        const toDate = (millisecond : number) => {
-            const date = new Date(millisecond)
-            const year = date.getFullYear()
-            const month = date.getMonth() + 1
-            const day = date.getDate()
-            const hour = date.getHours()
-            const minute = date.getMinutes()
-            const second = date.getSeconds()
-            const milli = date.getMilliseconds()
-            return `${year}/${month}/${day} ${hour}:${minute}:${second}.${milli}`
-        }
-        console.log("response",{
-            eventName: response.getEventname(),
-            eventData: JSON.parse(response.getEventdata())
+const prompt = "アルト、サムゲタン"
+
+async function streamTest(speaker_id: string,packets: Array<any>,delay: number){
+    const api_stream = client.transcriptionBiStreams()
+    const writeStream = new TranscriptionWriteStream(api_stream,speaker_id,prompt)
+
+    const api_promise = new Promise((resolve,reject)=>{
+        api_stream.on("data",(response : TranscriptionEvent)=>{
+            //millisecond unix time to date(format YYYY/MM/DD hh:mm:ss.ms)
+            const toDate = (millisecond : number) => {
+                const date = new Date(millisecond)
+                const year = date.getFullYear()
+                const month = date.getMonth() + 1
+                const day = date.getDate()
+                const hour = date.getHours()
+                const minute = date.getMinutes()
+                const second = date.getSeconds()
+                const milli = date.getMilliseconds()
+                return `${year}/${month}/${day} ${hour}:${minute}:${second}.${milli}`
+            }
+            console.log("response",{
+                eventName: response.getEventname(),
+                eventData: JSON.parse(response.getEventdata())
+            })
+        }).on("end",()=>{
+            console.log("api read end")
+            resolve()
         })
-    }).on("end",()=>{
-        console.log("api read end")
-        resolve()
-    })
-}) as Promise<void>
+    }) as Promise<void>
+    
+    //delayミリ秒待つ
+    await new Promise(resolve => setTimeout(resolve, delay));
+    await Promise.all([
+        api_promise,
+        send(packets,writeStream)
+    ])
+}
 
-const write_promise = new Promise((resolve,reject)=>{
-    send().then(()=>{
-        resolve()
-    })
-}) as Promise<void>
 
-Promise.all([api_promise,write_promise]).then(()=>{
+Promise.all([
+    streamTest("test-0",generatePackets("test.1695559785657.bin"),0),
+    streamTest("test-1",generatePackets("test.1695559793540.bin"),3000),
+]).then(()=>{
     console.log("end")
     process.exit(0)
 })
