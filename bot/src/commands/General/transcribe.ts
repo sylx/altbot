@@ -1,4 +1,4 @@
-import { ApplicationCommandOptionType, Channel, CommandInteraction, VoiceChannel, ClientVoiceManager, Snowflake, ChannelType, TextBasedChannel, Message } from "discord.js"
+import { ApplicationCommandOptionType, Channel, CommandInteraction, VoiceChannel, ClientVoiceManager, Snowflake, ChannelType, TextBasedChannel, Message, Guild, GuildMember } from "discord.js"
 import { Client } from "discordx"
 
 import { Discord, Guard, Slash, SlashOption } from "@decorators"
@@ -10,12 +10,19 @@ import { Database } from "@services"
 import { resolveDependency } from "@utils/functions"
 import { VoiceChat } from "../../services/VoiceChat"
 import { Tts } from "../../services/Tts"
-import { TranscribedData } from "../../utils/functions/listen"
 import { Transcription } from "../../services/Transcription"
 import { VoiceConnection } from "@discordjs/voice"
 
 
 const COMBINED_LOG_DURATION = 5*60*1000 //5分
+
+export interface TranscribedData{
+    id: string,
+    timestamp: number,
+    member: GuildMember,
+    text: string,
+    written: Message | undefined,
+}
 
 @Discord()
 export default class TranscribeCommand {
@@ -51,10 +58,16 @@ export default class TranscribeCommand {
 		}
 
 		const targetChannel=interaction.channel
-		let timeoutAfterReceive : NodeJS.Timeout | null = null
-		transcription.on("transcribed",async (data: any)=>{
-			timeoutAfterReceive && clearTimeout(timeoutAfterReceive)
-			appendLog(data)
+		transcription.on("transcription",async (data: any)=>{
+			const member = voiceChat.getChannel()?.guild.members.cache.get(data.speaker_id) as GuildMember
+			const transcribed : TranscribedData = {
+				id: [data.packet_timestamp,data.speaker_id].join("_"),
+				timestamp: data.begin,
+				member,
+				text: data.text,
+				written: undefined
+			}
+			appendLog(transcribed)
 			//ログの出力
 			outputLog(targetChannel as TextBasedChannel)
 		})
@@ -74,6 +87,8 @@ export default class TranscribeCommand {
 	}
 }
 
+
+
 const transcribedLogs: Array<TranscribedData> = []
 const transcribedLogsLimit = 100
 
@@ -81,6 +96,9 @@ function appendLog(log : TranscribedData){
 	const index = transcribedLogs.findIndex((item) => item.id === log.id)
 	if(index >= 0){
 		const old = transcribedLogs[index]
+		log.written = old.written
+		transcribedLogs[index] = log
+		console.log("update log",log.id)
 		if(old.written){
 			// 既に書き出されているので修正する
 			const msg=old.written
@@ -89,13 +107,14 @@ function appendLog(log : TranscribedData){
 				console.log(`edit ${msg.id}`)
 			})
 		}
-		transcribedLogs[index] = log
 	}else{
+		console.log("append log",log.id)
 		transcribedLogs.push(log)
 	}
 	while(transcribedLogs.length > transcribedLogsLimit){
 		transcribedLogs.shift()
 	}
+	console.log("log length",transcribedLogs.length)
 }
 
 function clearLog(){

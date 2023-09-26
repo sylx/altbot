@@ -20,6 +20,7 @@ export class TranscriptionWriteStream extends Writable{
     constructor(
         protected api_bi_stream : grpc.ClientDuplexStream<DiscordOpusPacketList,TranscriptionEvent>,
         protected speaker_id: string,
+        protected prompt: string = "",
         protected save_to_file: string | null = null
     ){ 
         super()
@@ -48,6 +49,7 @@ export class TranscriptionWriteStream extends Writable{
         let err: Error | null = null
         this.packetList.setIsFinal(is_final)
         this.packetList.setSpeakerId(this.speaker_id)
+        this.packetList.setPrompt(this.prompt)
         //console.log("flush",is_final ? "final" : "",this.packetList.getPacketsList().length,"packets")
         process.stdout.write(is_final ? "!" : ".")
         
@@ -118,13 +120,6 @@ export class Transcription {
 
     async startListen(connection: VoiceConnection,channel: VoiceChannel) : Promise<void>{
         const logger = await resolveDependency(Logger)
-        //init streams
-        try{
-            if(this.api_stream === null)
-                this.connectApi(this.emitter)
-        }catch(e){
-            logger.logError(e,"Exception")
-        }
         const receiver = connection.receiver;
         receiver.speaking.on('start', async (userId) => {
             const member = channel.guild.members.cache.get(userId) as GuildMember
@@ -145,8 +140,10 @@ export class Transcription {
         
     protected async listen(connection: VoiceConnection,member: GuildMember){
         const user = member.user
-        if(this.api_stream === null) throw new Error("no connection to api")
-        const write_stream = new TranscriptionWriteStream(this.api_stream,user.id,`./test.${Date.now()}.bin`)
+        if(this.api_stream === null){
+            await this.connectApi(this.emitter)
+        }
+        const write_stream = new TranscriptionWriteStream(this.api_stream as any,user.id,'アルトさん、地獄さん、ユハナさん、サムゲタン')
 
         const logger = await resolveDependency(Logger)
         logger.log(`speaking start ${member.displayName}(${user.username})`,"info")

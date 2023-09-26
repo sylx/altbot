@@ -27,7 +27,7 @@ const packets=[0,1,2,3].map(i=>{
 
 console.log("packets",packets.length)
 
-const writeStream = new TranscriptionWriteStream(api_stream,"test")
+const writeStream = new TranscriptionWriteStream(api_stream,"test","アルト、サムゲタン")
 
 // waitを入れながら送信する
 async function send(){
@@ -54,7 +54,10 @@ const api_promise = new Promise((resolve,reject)=>{
             const milli = date.getMilliseconds()
             return `${year}/${month}/${day} ${hour}:${minute}:${second}.${milli}`
         }
-        console.log("response",response.toObject())
+        console.log("response",{
+            eventName: response.getEventname(),
+            eventData: JSON.parse(response.getEventdata())
+        })
     }).on("end",()=>{
         console.log("api read end")
         resolve()
