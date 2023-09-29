@@ -92,6 +92,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
                     chunk = [b''.join([c[0] for c in chunks]),chunks[0][1],sum([c[2] for c in chunks])]
                     yield self.emit("vad",{
                         "speaker_id":speaker_id,
+                        "timestamp": chunk[1],
                         "duration": chunk[2]
                     })
                     audio = chunk[0]

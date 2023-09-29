@@ -56,7 +56,6 @@ export default class TranscribeCommand {
 			)
 			return
 		}
-
 		const targetChannel=interaction.channel
 		transcription.on("transcription",async (data: any)=>{
 			const member = voiceChat.getChannel()?.guild.members.cache.get(data.speaker_id) as GuildMember
@@ -122,25 +121,22 @@ function clearLog(){
 }
 
 let last_msg : Message<boolean> | null = null
-let last_msg_timestamp : number | null = null
 
 async function outputLog(targetChannel?: TextBasedChannel){
 	const logToBeSent=transcribedLogs.filter(item=>!item.written)
+	const logToBeSentLength = logToBeSent.reduce((a,b)=>a+b.text.length,0)
 	const now = Date.now()
 	if(logToBeSent.length > 0){
-		//前回からの経過時間がCOMBINED_LOG_DURATIONを超えていない場合は前回のメッセージに追記する
-		if(
-			last_msg && last_msg_timestamp && 
-			(now - last_msg_timestamp < COMBINED_LOG_DURATION)
-		){
-			await last_msg.edit(last_msg.content + "\n" + createLogText(logToBeSent))
+		const last_msg_log=last_msg ? transcribedLogs.filter(item=>item.written?.id === last_msg?.id) : null
+		if(last_msg && last_msg_log && last_msg_log.length < 10 && last_msg.content.length + logToBeSentLength < 2000){
+				//前回のメッセージに追加する
+				await last_msg.edit(createLogText(last_msg_log.concat(logToBeSent)))
 		}else{
 			// 新しいメッセージを作成する
 			const msg=
 				await targetChannel?.send(createLogText(logToBeSent)) as Message<boolean>
 			if(msg){
 				last_msg=msg
-				last_msg_timestamp=now
 			}
 		}
 		if(last_msg){
@@ -161,5 +157,6 @@ function createLogText(logs: Array<TranscribedData>) : string{
 
 		return `${leftZeroPad(time.getHours(),2)}:${leftZeroPad(time.getMinutes(),2)}:${leftZeroPad(time.getSeconds(),2)}`
 	}
-	return logs.map(log=>`${timeStr(log.timestamp)} ${log.member.displayName} : ${log.text}`).join("\n")
+	return logs.sort((a,b)=>a.timestamp-b.timestamp)
+				.map(log=>`${timeStr(log.timestamp)} ${log.member.displayName} : ${log.text}`).join("\n")
 }

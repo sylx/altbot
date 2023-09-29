@@ -143,7 +143,7 @@ export class Transcription {
         if(this.api_stream === null){
             await this.connectApi(this.emitter)
         }
-        const write_stream = new TranscriptionWriteStream(this.api_stream as any,user.id,'アルトさん、地獄さん、ユハナさん、サムゲタン')
+        const write_stream = new TranscriptionWriteStream(this.api_stream as any,user.id,'アルトさん、地獄さん、しょぼチャさん、サムゲタン')
 
         const logger = await resolveDependency(Logger)
         logger.log(`speaking start ${member.displayName}(${user.username})`,"info")
