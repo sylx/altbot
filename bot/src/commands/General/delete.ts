@@ -10,7 +10,7 @@ dayjs.extend(relativeTime)
 
 import { generalConfig } from "@config"
 import { Discord, Slash,SlashOption } from "@decorators"
-import { Guard, UserPermissions } from "@guards"
+import { Guard } from "@guards"
 import { Stats } from "@services"
 import { getColor, isValidUrl, simpleErrorEmbed, timeAgo } from "@utils/functions"
 
@@ -37,9 +37,7 @@ export default class DeleteCommand {
 		name: 'delete',
 		description: 'Botの発言を消します'
 	})
-	@Guard(
-		UserPermissions(['Administrator'])
-	)
+	@Guard()
 	async delete(
 		@SlashOption({ name: 'msg_id', type: ApplicationCommandOptionType.String,description: "消したいメッセージID",required: true }) msg_id: String,
 		interaction: CommandInteraction,

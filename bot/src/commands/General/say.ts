@@ -24,7 +24,7 @@ export default class SayCommand {
 		if(!count) count=1
 		if(count>10) count=10
 		const repeat = async (text: string, count: number) => {
-			await tts.speak(text)
+			await tts.speak(text,{useCache: true})
 			if(count>1) await repeat(text, count-1)
 		}
 		try {

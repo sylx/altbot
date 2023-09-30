@@ -1,6 +1,5 @@
 import { Entity, EntityRepositoryType, PrimaryKey, Property } from "@mikro-orm/core"
 import { EntityRepository } from "@mikro-orm/sqlite"
-import { VoiceChannel } from "discord.js"
 
 import { CustomBaseEntity } from "./BaseEntity"
 

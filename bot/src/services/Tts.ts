@@ -17,11 +17,17 @@ import * as google_protobuf_empty_pb from "google-protobuf/google/protobuf/empty
 import { Readable } from "stream"
 import { VoiceChat } from "./VoiceChat"
 
+interface TtsSpeakOptions {
+    useCache?: boolean,
+    silent?: boolean
+}
+
 @singleton()
 export class Tts {
     public client : TtsClient
     protected playQueue : Array<Readable> = []
     protected isPlaying : boolean = false
+    protected cache : Map<string,Buffer> = new Map()
     constructor(
         @inject(delay(() => VoiceChat)) private voiceChat: VoiceChat,
     ) {
@@ -65,9 +71,18 @@ export class Tts {
     }
 
 
-    speak(text: string) : Promise<void>{
+    speak(text: string,option?: TtsSpeakOptions) : Promise<void>{
         if(!this.voiceChat.isEnable()){
             throw new Error("not connected voice channel")
+        }
+        if(option?.useCache){
+            const buffer=this.cache.get(text)
+            if(buffer && option?.silent !== false){
+                console.log("from cache",text)
+                const stream = Readable.from(buffer)
+                this.playQueue.push(stream)
+                return this.playNextInQueue();
+            }
         }
         const req = new TtsSpeakRequest()
         req.setText(text)
@@ -76,15 +91,20 @@ export class Tts {
         return new Promise((resolve, reject) => {
             stream.on("data", async (response : TtsSpeakResponse) => {
                 const audio = response.getAudio()
-                console.log("from server",response.getText(),audio.length)            
+                console.log("from server",response.getText(),audio.length)           
                 if(audio){
                     // UInt8Array to buffer
                     const buffer = Buffer.from(audio)
                     // buffer to stream
                     const oggStream = Readable.from(buffer)
+                    if(option?.useCache){
+                        this.cache.set(text,buffer)
+                    }
                     console.log("queue",this.playQueue.length,response.getText())
-                    this.playQueue.push(oggStream)
-                    this.playNextInQueue();
+                    if(option?.silent !== false){
+                        this.playQueue.push(oggStream)
+                        this.playNextInQueue()
+                    }
                 }
             }).on("end", async () => {
                 console.log("recieve end")
