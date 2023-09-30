@@ -118,7 +118,7 @@ export class Transcription {
         })
     }
 
-    async startListen(connection: VoiceConnection,channel: VoiceChannel) : Promise<void>{
+    async startListen(connection: VoiceConnection,channel: VoiceChannel,prompt: string) : Promise<void>{
         const logger = await resolveDependency(Logger)
         const receiver = connection.receiver;
         receiver.speaking.on('start', async (userId) => {
@@ -127,7 +127,7 @@ export class Transcription {
             if(member){
                 logger.log(`listen start ${member.displayName}(${member.user.username})`,"info")
                 this.listeningStatus[userId] = true
-                await this.listen(connection,member)
+                await this.listen(connection,member,prompt)
                 this.listeningStatus[userId] = false
                 logger.log(`listen end ${member.displayName}(${member.user.username})`,"info")
             }
@@ -138,12 +138,12 @@ export class Transcription {
         this.api_stream=null
     }
         
-    protected async listen(connection: VoiceConnection,member: GuildMember){
+    protected async listen(connection: VoiceConnection,member: GuildMember,prompt: string = ""){
         const user = member.user
         if(this.api_stream === null){
             await this.connectApi(this.emitter)
         }
-        const write_stream = new TranscriptionWriteStream(this.api_stream as any,user.id,'アルトさん、地獄さん、しょぼチャさん、サムゲタン')
+        const write_stream = new TranscriptionWriteStream(this.api_stream as any,user.id,prompt)
 
         const logger = await resolveDependency(Logger)
         logger.log(`speaking start ${member.displayName}(${user.username})`,"info")

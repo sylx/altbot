@@ -3,9 +3,9 @@ import { Client } from "discordx"
 
 import { Discord, Guard, Slash, SlashOption } from "@decorators"
 import { Disabled } from "@guards"
-import { simpleSuccessEmbed,simpleErrorEmbed} from "@utils/functions"
+import { simpleSuccessEmbed,simpleErrorEmbed, resolveDependencies} from "@utils/functions"
 
-import { Data } from "@entities"
+import { Data, NgWord } from "@entities"
 import { Database } from "@services"
 import { resolveDependency } from "@utils/functions"
 import { VoiceChat } from "../../services/VoiceChat"
@@ -48,6 +48,7 @@ export default class TranscribeCommand {
 		const transcription = await resolveDependency(Transcription)
 		const tts = await resolveDependency(Tts)
 		const dataRepository = db.get(Data)
+		const ngword_db = db.get(NgWord)
 
 		if(!voiceChat.isEnable()){
 			simpleErrorEmbed(
@@ -57,18 +58,28 @@ export default class TranscribeCommand {
 			return
 		}
 		const targetChannel=interaction.channel
+		const ngwords=await ngword_db.getNgWords()
+
 		transcription.on("transcription",async (data: any)=>{
 			const member = voiceChat.getChannel()?.guild.members.cache.get(data.speaker_id) as GuildMember
-			const transcribed : TranscribedData = {
-				id: [data.packet_timestamp,data.speaker_id].join("_"),
-				timestamp: data.begin,
-				member,
-				text: data.text,
-				written: undefined
+			const ngword_regex=new RegExp(`(${ngwords.join("|")})`)
+			const ret=ngword_regex.exec(data.text)
+			if(ret){
+				const hit_word=ret[1]
+				const replys=await ngword_db.getReactions(hit_word)
+				const reply_text=replys[Math.floor(Math.random()*replys.length)]
+				tts.speak(reply_text)
+				const transcribed : TranscribedData = {
+					id: [data.packet_timestamp,data.speaker_id].join("_"),
+					timestamp: data.begin,
+					member,
+					text: data.text + "<-" + reply_text,
+					written: undefined
+				}
+				appendLog(transcribed)
+				//ログの出力
+				outputLog(targetChannel as TextBasedChannel)
 			}
-			appendLog(transcribed)
-			//ログの出力
-			outputLog(targetChannel as TextBasedChannel)
 		})
 		voiceChat.on("disconnect",async ()=>{
 			clearLog()
@@ -76,13 +87,14 @@ export default class TranscribeCommand {
 
 		await transcription.startListen(
 			voiceChat.getConnection() as VoiceConnection,
-			voiceChat.getChannel() as VoiceChannel)
+			voiceChat.getChannel() as VoiceChannel,
+			ngwords.join("、"))
 
 		simpleSuccessEmbed(
 			interaction,
-			"聞き取りを開始します"
+			"NGワードの監視を開始します"
 		)
-		tts.speak("聞き取りを開始します")
+		tts.speak("NGワードの監視を開始します")
 	}
 }
 
