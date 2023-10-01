@@ -92,9 +92,9 @@ export default class TranscribeCommand {
 				const prize_point = Math.floor(Math.pow((result.hostile_score - 5),(result.hostile_score > 5 ? 2.5 : 2)) * (result.hostile_score > 5 ? 1 : -1))
 				let prize_text = ""
 				if(prize_point > 0){
-					prize_text = `あなたの総スコアは${prize_point}ポイント増加します。自業自得だね！`
+					prize_text = `あなたのカルマは${prize_point}ポイント増加します。自業自得だね！`
 				}else{
-					prize_text = `あなたの総スコアは${Math.abs(prize_point)}ポイント減少します。良かったね！`					
+					prize_text = `あなたのカルマは${Math.abs(prize_point)}ポイント減少します。良かったね！`					
 				}
 				appendLog({
 					id: [data.packet_timestamp,member_me.id].join("_"),
@@ -145,9 +145,9 @@ export default class TranscribeCommand {
 					text: data.text + " <- " + reply_text,
 					written: undefined
 				}
-				const opusBuffer=Buffer.from(data.opusData)
-				tts.playQueue.push(Readable.from(opusBuffer))
-				tts.playNextInQueue()
+				// const opusBuffer=Buffer.from(data.opusData)
+				// tts.playQueue.push(Readable.from(opusBuffer))
+				// tts.playNextInQueue()
 	
 				appendLog(transcribed)
 				//ログの出力

@@ -188,12 +188,12 @@ export default class NgWordCommand {
 					.setColor(getColor('primary'))
 					.addFields([
 					{
-						name: "総スコア",
+						name: "カルマ",
 						value: stat.total_score.toString(),
 						inline: true,
 					} as APIEmbedField,
 					{
-						name: "総検知数",
+						name: "検知数",
 						value: stat.total_count.toString(),
 						inline: true,
 					} as EmbedField,
