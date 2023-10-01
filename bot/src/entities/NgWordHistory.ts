@@ -25,9 +25,6 @@ export class NgWordHistory extends CustomBaseEntity {
 
     @Property()
     hit_score: number
-
-    @ManyToOne(() => NgWord)
-    ngword: NgWord
 }
 
 // ===========================================
@@ -41,12 +38,11 @@ export interface UserStatistics {
 }
 
 export class NgWordHistoryRepository extends EntityRepository<NgWordHistory> {
-    async addHistory(member_id: string, hit_word: string,ngword: NgWord): Promise<NgWordHistory> {
+    async addHistory(member_id: string, hit_word: string,hit_score: number): Promise<NgWordHistory> {
         const row = new NgWordHistory()
         row.member_id = member_id
-        row.ngword = ngword
         row.hit_word = hit_word
-        row.hit_score = ngword.score
+        row.hit_score = hit_score
         await this.getEntityManager().persistAndFlush(row)
         return row
     }
@@ -61,7 +57,7 @@ export class NgWordHistoryRepository extends EntityRepository<NgWordHistory> {
         })
         return rows
     }
-    async getStatisticsByMember(member_id: string): Promise<UserDetailStatistics> {
+    async getStatisticsByMember(member_id: string): Promise<UserStatistics> {
         const em=this.getEntityManager() as EntityManager
         const query=em.createQueryBuilder(NgWordHistory,"h")
                 .select(["h.member_id","count(h.id) as total_count","sum(h.hit_score) as total_score"])

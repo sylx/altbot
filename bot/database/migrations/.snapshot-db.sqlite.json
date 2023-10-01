@@ -302,28 +302,10 @@
           "primary": false,
           "nullable": false,
           "mappedType": "integer"
-        },
-        "ngword_id": {
-          "name": "ngword_id",
-          "type": "integer",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "mappedType": "integer"
         }
       },
       "name": "ng_word_history",
       "indexes": [
-        {
-          "columnNames": [
-            "ngword_id"
-          ],
-          "composite": false,
-          "keyName": "ng_word_history_ngword_id_index",
-          "primary": false,
-          "unique": false
-        },
         {
           "keyName": "primary",
           "columnNames": [
@@ -335,20 +317,7 @@
         }
       ],
       "checks": [],
-      "foreignKeys": {
-        "ng_word_history_ngword_id_foreign": {
-          "constraintName": "ng_word_history_ngword_id_foreign",
-          "columnNames": [
-            "ngword_id"
-          ],
-          "localTableName": "ng_word_history",
-          "referencedColumnNames": [
-            "id"
-          ],
-          "referencedTableName": "ng_word",
-          "updateRule": "cascade"
-        }
-      }
+      "foreignKeys": {}
     },
     {
       "columns": {

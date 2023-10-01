@@ -178,7 +178,7 @@ export default class NgWordCommand {
 			const member=interaction.guild?.members.cache.get(stat.member_id)
 			let embed : EmbedBuilder | null = null
 			if(member){
-				const medals=["👑","🥇","🥈","🥉","🏅","🏅","🏅","🏅"]
+				const medals=["👑","🥈","🥉","🏅","🏅","🏅","🏅"]
 				const medal = medals[index] || ""
 				embed = new EmbedBuilder()
 				embed
