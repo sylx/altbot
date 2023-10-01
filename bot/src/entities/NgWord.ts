@@ -43,7 +43,11 @@ export class NgWord extends CustomBaseEntity {
 
 export class NgWordRepository extends EntityRepository<NgWord> {
     async getNgWords(): Promise<string[]> {
-        const rows = await this.findAll()
+        const rows = await this.findAll({
+            orderBy: {
+                count: "DESC"
+            }
+        })
         return rows.flatMap(row => row.words)
     }
     async getReactions(word: string): Promise<NgWord | null> {
