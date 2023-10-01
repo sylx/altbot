@@ -10,6 +10,8 @@ import { EventEmitter } from "events"
 import { resolveDependency } from "@utils/functions"
 import { Logger } from "./Logger"
 import { writeFile, writeFileSync } from "fs"
+import { Data, NgWord } from "@entities"
+import { Database } from "./Database"
 
 
 //まとめて送りつけるパケット数(1パケットの長さはだいたい20ms)
@@ -83,6 +85,7 @@ export class Transcription {
     protected emitter: EventEmitter = new EventEmitter()
     protected api_stream : grpc.ClientDuplexStream<DiscordOpusPacketList,TranscriptionEvent> | null = null
     protected listeningStatus : {[key: string]: boolean} = {}
+
     constructor(
     ) {
         this.client=new TranscriptionClient(
@@ -102,11 +105,13 @@ export class Transcription {
             this.api_stream = null
         })
         .on("data", (response : TranscriptionEvent) => {
-            console.log("from server",response.toObject())
+            console.log("from server",response.getEventname(),response.getEventdata(),response.getOpusdata().length)
             try {
+                const data=JSON.parse(response.getEventdata())
+                data.opusData=response.getOpusdata()
                 emitter.emit(
                         response.getEventname(),
-                        JSON.parse(response.getEventdata())
+                        data
                 )
             } catch (e) {
                 console.error(e)
@@ -118,7 +123,7 @@ export class Transcription {
         })
     }
 
-    async startListen(connection: VoiceConnection,channel: VoiceChannel,prompt: string) : Promise<void>{
+    async startListen(connection: VoiceConnection,channel: VoiceChannel,prompt: string | Function) : Promise<void>{
         const logger = await resolveDependency(Logger)
         const receiver = connection.receiver;
         receiver.speaking.on('start', async (userId) => {
@@ -127,7 +132,8 @@ export class Transcription {
             if(member){
                 logger.log(`listen start ${member.displayName}(${member.user.username})`,"info")
                 this.listeningStatus[userId] = true
-                await this.listen(connection,member,prompt)
+                const prompt_str = typeof prompt === "function" ? await prompt() : prompt
+                await this.listen(connection,member,prompt_str)
                 this.listeningStatus[userId] = false
                 logger.log(`listen end ${member.displayName}(${member.user.username})`,"info")
             }

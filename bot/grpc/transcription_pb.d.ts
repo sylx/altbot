@@ -67,6 +67,10 @@ export class TranscriptionEvent extends jspb.Message {
     setEventname(value: string): TranscriptionEvent;
     getEventdata(): string;
     setEventdata(value: string): TranscriptionEvent;
+    getOpusdata(): Uint8Array | string;
+    getOpusdata_asU8(): Uint8Array;
+    getOpusdata_asB64(): string;
+    setOpusdata(value: Uint8Array | string): TranscriptionEvent;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): TranscriptionEvent.AsObject;
@@ -82,5 +86,6 @@ export namespace TranscriptionEvent {
     export type AsObject = {
         eventname: string,
         eventdata: string,
+        opusdata: Uint8Array | string,
     }
 }

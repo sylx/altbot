@@ -12,6 +12,7 @@ import { VoiceChat } from "../../services/VoiceChat"
 import { Tts } from "../../services/Tts"
 import { Transcription } from "../../services/Transcription"
 import { VoiceConnection } from "@discordjs/voice"
+import { Readable } from "stream"
 
 
 const COMBINED_LOG_DURATION = 5*60*1000 //5分
@@ -58,24 +59,29 @@ export default class TranscribeCommand {
 			return
 		}
 		const targetChannel=interaction.channel
-		const ngwords=await ngword_db.getNgWords()
+		const reaction_count : {[key: number]: number} = {}
 
 		transcription.on("transcription",async (data: any)=>{
-			const member = voiceChat.getChannel()?.guild.members.cache.get(data.speaker_id) as GuildMember
+			const member = voiceChat.getChannel()?.guild.members.cache.get(data.speaker_id) as GuildMember		
+			const ngwords=await ngword_db.getNgWords()
 			const ngword_regex=new RegExp(`(${ngwords.join("|")})`)
 			const ret=ngword_regex.exec(data.text)
 			if(ret){
 				const hit_word=ret[1]
-				const replys=await ngword_db.getReactions(hit_word)
+				const [replys,ids]=await ngword_db.getReactions(hit_word)
 				const reply_text=replys[Math.floor(Math.random()*replys.length)]
-				tts.speak(reply_text)
+				tts.speak(reply_text as string)
 				const transcribed : TranscribedData = {
 					id: [data.packet_timestamp,data.speaker_id].join("_"),
 					timestamp: data.begin,
 					member,
-					text: data.text + "<-" + reply_text,
+					text: data.text + " <- " + reply_text,
 					written: undefined
 				}
+				//const opusBuffer=Buffer.from(data.opusData)
+				//tts.playQueue.push(Readable.from(opusBuffer))
+				//tts.playNextInQueue()
+	
 				appendLog(transcribed)
 				//ログの出力
 				outputLog(targetChannel as TextBasedChannel)
@@ -88,7 +94,10 @@ export default class TranscribeCommand {
 		await transcription.startListen(
 			voiceChat.getConnection() as VoiceConnection,
 			voiceChat.getChannel() as VoiceChannel,
-			ngwords.join("、"))
+			async ()=>{
+				const ngwords=await ngword_db.getNgWords()
+				return ngwords.join("、")
+			})
 
 		simpleSuccessEmbed(
 			interaction,

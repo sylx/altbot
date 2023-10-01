@@ -553,8 +553,9 @@ proto.AiService.TranscriptionEvent.prototype.toObject = function(opt_includeInst
  */
 proto.AiService.TranscriptionEvent.toObject = function(includeInstance, msg) {
   var f, obj = {
-    eventname: jspb.Message.getFieldWithDefault(msg, 2, ""),
-    eventdata: jspb.Message.getFieldWithDefault(msg, 3, "")
+    eventname: jspb.Message.getFieldWithDefault(msg, 1, ""),
+    eventdata: jspb.Message.getFieldWithDefault(msg, 2, ""),
+    opusdata: msg.getOpusdata_asB64()
   };
 
   if (includeInstance) {
@@ -591,13 +592,17 @@ proto.AiService.TranscriptionEvent.deserializeBinaryFromReader = function(msg, r
     }
     var field = reader.getFieldNumber();
     switch (field) {
-    case 2:
+    case 1:
       var value = /** @type {string} */ (reader.readString());
       msg.setEventname(value);
       break;
-    case 3:
+    case 2:
       var value = /** @type {string} */ (reader.readString());
       msg.setEventdata(value);
+      break;
+    case 3:
+      var value = /** @type {!Uint8Array} */ (reader.readBytes());
+      msg.setOpusdata(value);
       break;
     default:
       reader.skipField();
@@ -631,13 +636,20 @@ proto.AiService.TranscriptionEvent.serializeBinaryToWriter = function(message, w
   f = message.getEventname();
   if (f.length > 0) {
     writer.writeString(
-      2,
+      1,
       f
     );
   }
   f = message.getEventdata();
   if (f.length > 0) {
     writer.writeString(
+      2,
+      f
+    );
+  }
+  f = message.getOpusdata_asU8();
+  if (f.length > 0) {
+    writer.writeBytes(
       3,
       f
     );
@@ -646,11 +658,11 @@ proto.AiService.TranscriptionEvent.serializeBinaryToWriter = function(message, w
 
 
 /**
- * optional string eventName = 2;
+ * optional string eventName = 1;
  * @return {string}
  */
 proto.AiService.TranscriptionEvent.prototype.getEventname = function() {
-  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 2, ""));
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 1, ""));
 };
 
 
@@ -659,16 +671,16 @@ proto.AiService.TranscriptionEvent.prototype.getEventname = function() {
  * @return {!proto.AiService.TranscriptionEvent} returns this
  */
 proto.AiService.TranscriptionEvent.prototype.setEventname = function(value) {
-  return jspb.Message.setProto3StringField(this, 2, value);
+  return jspb.Message.setProto3StringField(this, 1, value);
 };
 
 
 /**
- * optional string eventData = 3;
+ * optional string eventData = 2;
  * @return {string}
  */
 proto.AiService.TranscriptionEvent.prototype.getEventdata = function() {
-  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 3, ""));
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 2, ""));
 };
 
 
@@ -677,7 +689,49 @@ proto.AiService.TranscriptionEvent.prototype.getEventdata = function() {
  * @return {!proto.AiService.TranscriptionEvent} returns this
  */
 proto.AiService.TranscriptionEvent.prototype.setEventdata = function(value) {
-  return jspb.Message.setProto3StringField(this, 3, value);
+  return jspb.Message.setProto3StringField(this, 2, value);
+};
+
+
+/**
+ * optional bytes opusData = 3;
+ * @return {!(string|Uint8Array)}
+ */
+proto.AiService.TranscriptionEvent.prototype.getOpusdata = function() {
+  return /** @type {!(string|Uint8Array)} */ (jspb.Message.getFieldWithDefault(this, 3, ""));
+};
+
+
+/**
+ * optional bytes opusData = 3;
+ * This is a type-conversion wrapper around `getOpusdata()`
+ * @return {string}
+ */
+proto.AiService.TranscriptionEvent.prototype.getOpusdata_asB64 = function() {
+  return /** @type {string} */ (jspb.Message.bytesAsB64(
+      this.getOpusdata()));
+};
+
+
+/**
+ * optional bytes opusData = 3;
+ * Note that Uint8Array is not supported on all browsers.
+ * @see http://caniuse.com/Uint8Array
+ * This is a type-conversion wrapper around `getOpusdata()`
+ * @return {!Uint8Array}
+ */
+proto.AiService.TranscriptionEvent.prototype.getOpusdata_asU8 = function() {
+  return /** @type {!Uint8Array} */ (jspb.Message.bytesAsU8(
+      this.getOpusdata()));
+};
+
+
+/**
+ * @param {!(string|Uint8Array)} value
+ * @return {!proto.AiService.TranscriptionEvent} returns this
+ */
+proto.AiService.TranscriptionEvent.prototype.setOpusdata = function(value) {
+  return jspb.Message.setProto3BytesField(this, 3, value);
 };
 
 

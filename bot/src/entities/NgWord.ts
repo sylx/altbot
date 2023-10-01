@@ -16,7 +16,7 @@ export class NgWord extends CustomBaseEntity {
     words: string
 
     @Property()
-    reactions: string
+    reactions: string    
 }
 
 // ===========================================
@@ -28,11 +28,14 @@ export class NgWordRepository extends EntityRepository<NgWord> {
         const rows = await this.findAll()
         return rows.flatMap(row => row.words.split(','))
     }
-    async getReactions(word: string): Promise<string[]> {
+    async getReactions(word: string): Promise<[string[],number[]]> {
         const rows = await this.find({
             words: new RegExp(word)
         })
-        return rows.flatMap(row => row.reactions.split(','))
+        return [
+            rows.flatMap(row => row.reactions.split(',')),
+            rows.map(row => row.id)
+        ]
     }
     async addNgWord(words: string[], reactions: string[]): Promise<NgWord> {
         const row = new NgWord()

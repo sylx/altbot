@@ -25,7 +25,7 @@ interface TtsSpeakOptions {
 @singleton()
 export class Tts {
     public client : TtsClient
-    protected playQueue : Array<Readable> = []
+    public playQueue : Array<Readable> = []
     protected isPlaying : boolean = false
     protected cache : Map<string,Buffer> = new Map()
     constructor(
