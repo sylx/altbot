@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13transcription.proto\x12\tAiService\"4\n\x11\x44iscordOpusPacket\x12\x11\n\ttimestamp\x18\x01 \x01(\x03\x12\x0c\n\x04\x64\x61ta\x18\x03 \x01(\x0c\"|\n\x15\x44iscordOpusPacketList\x12-\n\x07packets\x18\x01 \x03(\x0b\x32\x1c.AiService.DiscordOpusPacket\x12\x12\n\nspeaker_id\x18\x02 \x01(\t\x12\x0e\n\x06prompt\x18\x03 \x01(\t\x12\x10\n\x08is_final\x18\x04 \x01(\x08\"L\n\x12TranscriptionEvent\x12\x11\n\teventName\x18\x01 \x01(\t\x12\x11\n\teventData\x18\x02 \x01(\t\x12\x10\n\x08opusData\x18\x03 \x01(\x0c\x32n\n\rTranscription\x12]\n\x16TranscriptionBiStreams\x12 .AiService.DiscordOpusPacketList\x1a\x1d.AiService.TranscriptionEvent(\x01\x30\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13transcription.proto\x12\tAiService\"4\n\x11\x44iscordOpusPacket\x12\x11\n\ttimestamp\x18\x01 \x01(\x03\x12\x0c\n\x04\x64\x61ta\x18\x02 \x01(\x0c\"|\n\x15\x44iscordOpusPacketList\x12-\n\x07packets\x18\x01 \x03(\x0b\x32\x1c.AiService.DiscordOpusPacket\x12\x12\n\nspeaker_id\x18\x02 \x01(\t\x12\x0e\n\x06prompt\x18\x03 \x01(\t\x12\x10\n\x08is_final\x18\x04 \x01(\x08\"L\n\x12TranscriptionEvent\x12\x11\n\teventName\x18\x01 \x01(\t\x12\x11\n\teventData\x18\x02 \x01(\t\x12\x10\n\x08opusData\x18\x03 \x01(\x0c\x32n\n\rTranscription\x12]\n\x16TranscriptionBiStreams\x12 .AiService.DiscordOpusPacketList\x1a\x1d.AiService.TranscriptionEvent(\x01\x30\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)

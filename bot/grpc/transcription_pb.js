@@ -161,7 +161,7 @@ proto.AiService.DiscordOpusPacket.deserializeBinaryFromReader = function(msg, re
       var value = /** @type {number} */ (reader.readInt64());
       msg.setTimestamp(value);
       break;
-    case 3:
+    case 2:
       var value = /** @type {!Uint8Array} */ (reader.readBytes());
       msg.setData(value);
       break;
@@ -204,7 +204,7 @@ proto.AiService.DiscordOpusPacket.serializeBinaryToWriter = function(message, wr
   f = message.getData_asU8();
   if (f.length > 0) {
     writer.writeBytes(
-      3,
+      2,
       f
     );
   }
@@ -230,16 +230,16 @@ proto.AiService.DiscordOpusPacket.prototype.setTimestamp = function(value) {
 
 
 /**
- * optional bytes data = 3;
+ * optional bytes data = 2;
  * @return {!(string|Uint8Array)}
  */
 proto.AiService.DiscordOpusPacket.prototype.getData = function() {
-  return /** @type {!(string|Uint8Array)} */ (jspb.Message.getFieldWithDefault(this, 3, ""));
+  return /** @type {!(string|Uint8Array)} */ (jspb.Message.getFieldWithDefault(this, 2, ""));
 };
 
 
 /**
- * optional bytes data = 3;
+ * optional bytes data = 2;
  * This is a type-conversion wrapper around `getData()`
  * @return {string}
  */
@@ -250,7 +250,7 @@ proto.AiService.DiscordOpusPacket.prototype.getData_asB64 = function() {
 
 
 /**
- * optional bytes data = 3;
+ * optional bytes data = 2;
  * Note that Uint8Array is not supported on all browsers.
  * @see http://caniuse.com/Uint8Array
  * This is a type-conversion wrapper around `getData()`
@@ -267,7 +267,7 @@ proto.AiService.DiscordOpusPacket.prototype.getData_asU8 = function() {
  * @return {!proto.AiService.DiscordOpusPacket} returns this
  */
 proto.AiService.DiscordOpusPacket.prototype.setData = function(value) {
-  return jspb.Message.setProto3BytesField(this, 3, value);
+  return jspb.Message.setProto3BytesField(this, 2, value);
 };
 
 
