@@ -1,5 +1,5 @@
 import { Category } from "@discordx/utilities"
-import { ActionRowBuilder, ApplicationCommandOptionType, ButtonBuilder, ButtonStyle, CommandInteraction, ComponentType, EmbedBuilder, EmbedField,
+import { APIEmbedField, ActionRowBuilder, ApplicationCommandOptionType, ButtonBuilder, ButtonStyle, CommandInteraction, ComponentType, EmbedBuilder, EmbedField,
 	FetchMessageOptions,
 	StringSelectMenuBuilder, StringSelectMenuOptionBuilder } from "discord.js"
 import { Client, SlashGroup } from "discordx"
@@ -9,11 +9,12 @@ import { generalConfig } from "@config"
 import { Discord, Slash,SlashOption } from "@decorators"
 import { Guard } from "@guards"
 import { Database, Stats } from "@services"
-import { resolveDependency, simpleErrorEmbed, simpleSuccessEmbed } from "@utils/functions"
-import { NgWord } from "@entities"
+import { getColor, resolveDependency, simpleErrorEmbed, simpleSuccessEmbed } from "@utils/functions"
+import { NgWord, NgWordHistory } from "@entities"
 
 import { table as TextTable,getBorderCharacters } from 'table';
 import { ResponseFiltersContainer } from "@tsed/common"
+import { I } from "ts-toolbelt"
 
 
 @Discord()
@@ -161,8 +162,8 @@ export default class NgWordCommand {
 		)
 	}
 	@Slash({
-		name: 'start',
-		description: 'NGワードの監視を開始します'
+		name: 'ranking',
+		description: '要注意人物のランキングを表示します'
 	})
 	@Guard()
 	async start(
@@ -170,5 +171,53 @@ export default class NgWordCommand {
 		client: Client,
 		{ localize }: InteractionData
 	) {
+		const db = await resolveDependency(Database)
+		const ngword_history_db = db.get(NgWordHistory)
+		const stats=await ngword_history_db.getStatistics()
+		const embed_promise=stats.sort((a,b)=>b.total_score-a.total_score).map( async (stat,index)=>{
+			const member=interaction.guild?.members.cache.get(stat.member_id)
+			let embed : EmbedBuilder | null = null
+			if(member){
+				const medals=["👑","🥇","🥈","🥉","🏅","🏅","🏅","🏅"]
+				const medal = medals[index] || ""
+				embed = new EmbedBuilder()
+				embed
+					.setTitle(`${medal}第${index+1}位${medal} ${member.displayName}(${member.user.username})`)
+					.setThumbnail(member.user.displayAvatarURL())
+				embed
+					.setColor(getColor('primary'))
+					.addFields([
+					{
+						name: "総スコア",
+						value: stat.total_score.toString(),
+						inline: true,
+					} as APIEmbedField,
+					{
+						name: "総検知数",
+						value: stat.total_count.toString(),
+						inline: true,
+					} as EmbedField,
+				])
+				if(index < 3){
+					const hit_words=await ngword_history_db.getRecentHistory(stat.member_id,5)
+					embed.setFooter({
+						text: `最近の発言: ${hit_words.map(h=>h.hit_word).join("、")}`
+					})
+				}
+			}
+			return embed
+		})
+		const embeds = await Promise.all(embed_promise)
+		const filtered_embeds = embeds.filter(Boolean) as EmbedBuilder[]
+		if(filtered_embeds.length > 0){
+			await interaction.followUp({
+				embeds: filtered_embeds
+			})
+		}else{
+			simpleSuccessEmbed(
+				interaction,
+				`全員いい子です`
+			)
+		}
 	}
 }

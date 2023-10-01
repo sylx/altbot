@@ -73,10 +73,17 @@ export default class TranscribeCommand {
 				ngw.count++
 				await ngword_db.getEntityManager().persistAndFlush(ngw)
 				await ngword_history_db.addHistory(data.speaker_id,hit_word,ngw)
+				const stat=await ngword_history_db.getStatisticsByMember(data.speaker_id)
+				console.log(stat)
 
-				const reactions = ngw.normal_reactions
-				const reply_text=reactions[Math.floor(Math.random()*reactions.length)]  as string
-				tts.speak(reply_text.replace(/{username}/g,member.displayName))
+				let reactions = ngw.gentle_reactions
+				if(stat.total_score > 20){
+					reactions = ngw.normal_reactions
+				}else if(stat.total_score > 50){
+					reactions = ngw.guilty_reactions
+				}
+				const reply_text=reactions[Math.floor(Math.random()*reactions.length)].replace(/{username}/g,member.displayName)
+				tts.speak(reply_text)
 				const transcribed : TranscribedData = {
 					id: [data.packet_timestamp,data.speaker_id].join("_"),
 					timestamp: data.begin,
@@ -84,9 +91,9 @@ export default class TranscribeCommand {
 					text: data.text + " <- " + reply_text,
 					written: undefined
 				}
-				const opusBuffer=Buffer.from(data.opusData)
-				tts.playQueue.push(Readable.from(opusBuffer))
-				tts.playNextInQueue()
+				// const opusBuffer=Buffer.from(data.opusData)
+				// tts.playQueue.push(Readable.from(opusBuffer))
+				// tts.playNextInQueue()
 	
 				appendLog(transcribed)
 				//ログの出力
