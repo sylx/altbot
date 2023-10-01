@@ -66,7 +66,7 @@ class Tts(tts_pb2_grpc.TtsServicer):
         # リクエストを受け取る        
         wholeText = request.text
         # 分割する
-        sentences = self.splitText(wholeText,8)
+        sentences = self.splitText(wholeText,50)
         # 音声データを生成する
         for text in sentences:
             audio = await asyncio.get_running_loop().run_in_executor(self.pool, self.generateSpeech, text)
