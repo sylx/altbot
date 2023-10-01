@@ -51,13 +51,13 @@ export class NgWordRepository extends EntityRepository<NgWord> {
             words: new RegExp(word)
         })
     }
-    async addNgWord(word: string,score: number,member: GuildMember | undefined): Promise<NgWord> {
+    async addNgWord(word: string,score: number,member: GuildMember | undefined,without_synonym: Boolean): Promise<NgWord> {
         const gpt = await resolveDependency(Gpt)
         const response = await gpt.makeNgWord(word)
         if (response === null) throw new Error("AIの生成中に何らかのエラーがありました")        
 
         const row = new NgWord()
-        row.words = [word,...response.synonyms]
+        row.words = without_synonym ? [word] : [word,...response.synonyms]
         row.score = score
         row.gentle_reactions = response.gentle_reactions
         row.normal_reactions = response.normal_reactions

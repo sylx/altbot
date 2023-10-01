@@ -5,7 +5,7 @@ import { Discord, Guard, Slash, SlashOption } from "@decorators"
 import { Disabled } from "@guards"
 import { simpleSuccessEmbed,simpleErrorEmbed, resolveDependencies} from "@utils/functions"
 
-import { Data, NgWord } from "@entities"
+import { Data, NgWord, NgWordHistory } from "@entities"
 import { Database } from "@services"
 import { resolveDependency } from "@utils/functions"
 import { VoiceChat } from "../../services/VoiceChat"
@@ -50,6 +50,7 @@ export default class TranscribeCommand {
 		const tts = await resolveDependency(Tts)
 		const dataRepository = db.get(Data)
 		const ngword_db = db.get(NgWord)
+		const ngword_history_db = db.get(NgWordHistory)
 
 		if(!voiceChat.isEnable()){
 			simpleErrorEmbed(
@@ -59,7 +60,6 @@ export default class TranscribeCommand {
 			return
 		}
 		const targetChannel=interaction.channel
-		const reaction_count : {[key: number]: number} = {}
 
 		transcription.on("transcription",async (data: any)=>{
 			const member = voiceChat.getChannel()?.guild.members.cache.get(data.speaker_id) as GuildMember		
@@ -72,9 +72,11 @@ export default class TranscribeCommand {
 				if(ngw === null) return
 				ngw.count++
 				await ngword_db.getEntityManager().persistAndFlush(ngw)
+				await ngword_history_db.addHistory(data.speaker_id,hit_word,ngw)
+
 				const reactions = ngw.normal_reactions
-				const reply_text=reactions[Math.floor(Math.random()*reactions.length)]
-				tts.speak(reply_text as string)
+				const reply_text=reactions[Math.floor(Math.random()*reactions.length)]  as string
+				tts.speak(reply_text.replace(/{username}/g,member.displayName))
 				const transcribed : TranscribedData = {
 					id: [data.packet_timestamp,data.speaker_id].join("_"),
 					timestamp: data.begin,
@@ -82,9 +84,9 @@ export default class TranscribeCommand {
 					text: data.text + " <- " + reply_text,
 					written: undefined
 				}
-				//const opusBuffer=Buffer.from(data.opusData)
-				//tts.playQueue.push(Readable.from(opusBuffer))
-				//tts.playNextInQueue()
+				const opusBuffer=Buffer.from(data.opusData)
+				tts.playQueue.push(Readable.from(opusBuffer))
+				tts.playNextInQueue()
 	
 				appendLog(transcribed)
 				//ログの出力

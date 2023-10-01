@@ -12,11 +12,9 @@ import { Database, Stats } from "@services"
 import { resolveDependency, simpleErrorEmbed, simpleSuccessEmbed } from "@utils/functions"
 import { NgWord } from "@entities"
 
-const links = [
-	{ label: 'Invite me!', url: generalConfig.links.invite },
-	{ label: 'Support server', url: generalConfig.links.supportServer },
-	{ label: 'Github', url: generalConfig.links.gitRemoteRepo }
-]
+import { table as TextTable,getBorderCharacters } from 'table';
+import { ResponseFiltersContainer } from "@tsed/common"
+
 
 @Discord()
 @injectable()
@@ -35,8 +33,9 @@ export default class NgWordCommand {
 	})
 	@Guard()
 	async add(
-		@SlashOption({ name: '単語', type: ApplicationCommandOptionType.String,description: "NGワード",required: true }) ngword: string,
+		@SlashOption({ name: '単語', type: ApplicationCommandOptionType.String,description: "NGワード",required: true }) ngword: string,		
 		@SlashOption({ name: '危険度', type: ApplicationCommandOptionType.String,description: "危険さ(1-10)",required: true }) score: number,
+		@SlashOption({ name: '類義語生成をしない', type: ApplicationCommandOptionType.Boolean,description: "類義語を生成しない場合はTrue",required: false }) without_synonym: boolean,
 		interaction: CommandInteraction,
 		client: Client,
 		{ localize }: InteractionData
@@ -53,7 +52,7 @@ export default class NgWordCommand {
 
 		try{
 			const user_id=interaction.user.id
-			const ngw=await ngword_db.addNgWord(ngword,score,interaction.guild?.members.cache.get(user_id))
+			const ngw=await ngword_db.addNgWord(ngword,score,interaction.guild?.members.cache.get(user_id),Boolean(without_synonym))
 			if(ngw instanceof NgWord){
 				simpleSuccessEmbed(
 					interaction,
@@ -85,17 +84,50 @@ export default class NgWordCommand {
 		const ngwords=await ngword_db.findAll()
 
 		// 2000文字ごとに出力する
-		let chunk : Array<string>=[]
-		ngwords.sort((a,b)=>a.count-b.count).forEach(ngw=>{
+		let chunk : Array<Array<string>>=[]
+		const tablize=(chunk : Array<Array<string>>) : string => {
+			const header = [
+				"ID",
+				"単語",
+				"危険度",
+				"作成者",
+				"検知数"
+			]
+			return "```"+TextTable(
+				[header,...chunk],
+				{
+					border : getBorderCharacters('norc'),
+					columns: [
+						{ alignment: 'left' },
+						{ alignment: 'left' },
+						{ alignment: 'right' },
+						{ alignment: 'center' },
+						{ alignment: 'right' }						
+					],
+					drawVerticalLine: ()=>false,
+				}
+				// whitespace * 2 => U+2001
+			).replace(/  /g,"\u3000")+"```"
+		}
+		ngwords.sort((a,b)=>b.count-a.count).forEach(ngw=>{
 			const member=interaction.guild?.members.cache.get(ngw.createdBy as string)
-			const newline=`${ngw.id}: ${ngw.words.join(",")}  危険度:${ngw.score} 作成者:${member ? member.displayName : "**規制**"} 検知数:${ngw.count}回`
-			if(chunk.reduce((a,b)=>a+b.length,0)+newline.length>2000){
-				interaction.channel?.send(chunk.join("\n"))
+			const newline=[
+				ngw.id,
+				ngw.words.join("、"),
+				ngw.score,
+				member ? member.displayName : "**規制**",
+				ngw.count
+			] as Array<string>
+
+			const table=tablize([...chunk,newline])
+
+			if(table.length>2000){
+				interaction.channel?.send(tablize(chunk))
 				chunk=[]
 			}
 			chunk.push(newline)
 		})
-		interaction.channel?.send(chunk.join("\n"))
+		interaction.channel?.send(tablize(chunk))
 		simpleSuccessEmbed(
 			interaction,
 			`一覧を表示しました`
