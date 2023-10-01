@@ -68,8 +68,12 @@ export default class TranscribeCommand {
 			const ret=ngword_regex.exec(data.text)
 			if(ret){
 				const hit_word=ret[1]
-				const [replys,ids]=await ngword_db.getReactions(hit_word)
-				const reply_text=replys[Math.floor(Math.random()*replys.length)]
+				const ngw=await ngword_db.getReactions(hit_word)
+				if(ngw === null) return
+				ngw.count++
+				await ngword_db.getEntityManager().persistAndFlush(ngw)
+				const reactions = ngw.normal_reactions
+				const reply_text=reactions[Math.floor(Math.random()*reactions.length)]
 				tts.speak(reply_text as string)
 				const transcribed : TranscribedData = {
 					id: [data.packet_timestamp,data.speaker_id].join("_"),

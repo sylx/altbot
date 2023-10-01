@@ -8,8 +8,8 @@ import { injectable } from "tsyringe"
 import { generalConfig } from "@config"
 import { Discord, Slash,SlashOption } from "@decorators"
 import { Guard } from "@guards"
-import { Database, Stats,Gpt } from "@services"
-import { getColor, resolveDependency, simpleErrorEmbed, simpleSuccessEmbed } from "@utils/functions"
+import { Database, Stats } from "@services"
+import { resolveDependency, simpleErrorEmbed, simpleSuccessEmbed } from "@utils/functions"
 import { NgWord } from "@entities"
 
 const links = [
@@ -35,29 +35,32 @@ export default class NgWordCommand {
 	})
 	@Guard()
 	async add(
-		@SlashOption({ name: '単語', type: ApplicationCommandOptionType.String,description: "NGワード",required: true }) ngword: String,
+		@SlashOption({ name: '単語', type: ApplicationCommandOptionType.String,description: "NGワード",required: true }) ngword: string,
+		@SlashOption({ name: '危険度', type: ApplicationCommandOptionType.String,description: "危険さ(1-10)",required: true }) score: number,
 		interaction: CommandInteraction,
 		client: Client,
 		{ localize }: InteractionData
 	) {
 		const db = await resolveDependency(Database)
 		const ngword_db = db.get(NgWord)
-		const gpt = await resolveDependency(Gpt)
+		if(score < 1 || score > 10){
+			simpleErrorEmbed(
+				interaction,
+				`危険度は1-10の間で指定してください`
+			)
+			return
+		}
 
 		try{
-			const result=await gpt.makeNgWord(ngword)
-			if(result){
-				console.log(JSON.stringify(result,null,2))
-				const ngw=await ngword_db.addNgWord(
-					[ngword,...result.synonyms],
-					result.responses
-				)
+			const user_id=interaction.user.id
+			const ngw=await ngword_db.addNgWord(ngword,score,interaction.guild?.members.cache.get(user_id))
+			if(ngw instanceof NgWord){
 				simpleSuccessEmbed(
 					interaction,
 					`追加しました: ${JSON.stringify({
 						id: ngw.id,
-						words: ngw.words,
-						reactions: ngw.reactions.length
+						"危険度": ngw.score,
+						"単語": ngw.words,
 					},null,2)}`)
 			}
 		}catch(err){
@@ -83,10 +86,9 @@ export default class NgWordCommand {
 
 		// 2000文字ごとに出力する
 		let chunk : Array<string>=[]
-		ngwords.forEach(ngw=>{
-			const w=ngw.words
-			const id=ngw.id
-			const newline=`${id}: ${w}`
+		ngwords.sort((a,b)=>a.count-b.count).forEach(ngw=>{
+			const member=interaction.guild?.members.cache.get(ngw.createdBy as string)
+			const newline=`${ngw.id}: ${ngw.words.join(",")}  危険度:${ngw.score} 作成者:${member ? member.displayName : "**規制**"} 検知数:${ngw.count}回`
 			if(chunk.reduce((a,b)=>a+b.length,0)+newline.length>2000){
 				interaction.channel?.send(chunk.join("\n"))
 				chunk=[]
@@ -126,5 +128,15 @@ export default class NgWordCommand {
 			`削除できませんでした ${id}`
 		)
 	}
-
+	@Slash({
+		name: 'start',
+		description: 'NGワードの監視を開始します'
+	})
+	@Guard()
+	async start(
+		interaction: CommandInteraction,
+		client: Client,
+		{ localize }: InteractionData
+	) {
+	}
 }

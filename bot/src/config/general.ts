@@ -3,8 +3,8 @@ export const generalConfig: GeneralConfigType = {
 	// do not touch that
     __templateVersion: '2.0.0',
 
-	name: 'moebot', // the name of your bot
-	description: 'moemoe no bot', // the description of your bot
+	name: 'altbot', // the name of your bot
+	description: 'yet another ai-powerd discord bot', // the description of your bot
 	defaultLocale: 'ja', // default language of the bot, must be a valid locale
 	simpleCommandsPrefix: '!', // default prefix for simple command messages (old way to do commands on discord)
 	ownerId: process.env['BOT_OWNER_ID'] || '',
@@ -38,6 +38,7 @@ export const generalConfig: GeneralConfigType = {
 
 // global colors
 export const colorsConfig = {
-
 	primary: '#2F3136'
 }
+
+export const botNames = ["アルトボット","例のボット","ボリコレボット","アルト"]

@@ -10,7 +10,7 @@ import { delay, inject, singleton } from "tsyringe"
 
 import * as controllers from "@api/controllers"
 import { apiConfig, logsConfig } from "@config"
-import { Pastebin, PluginsManager, Scheduler, WebSocket } from "@services"
+import { PluginsManager, Scheduler, WebSocket } from "@services"
 import { fileOrDirectoryExists, formatDate, getTypeOfInteraction, numberAlign, oneLine, resolveAction, resolveChannel, resolveDependency, resolveGuild, resolveUser, validString } from "@utils/functions"
 
 @singleton()
@@ -20,7 +20,6 @@ export class Logger {
         @inject(delay(() => Client)) private client: Client,
         @inject(delay(() => Scheduler)) private scheduler: Scheduler,
         @inject(delay(() => WebSocket)) private ws: WebSocket,
-        @inject(delay(() => Pastebin)) private pastebin: Pastebin,
         @inject(delay(() => PluginsManager)) private pluginsManager: PluginsManager
     ) {
         this.defaultConsole = { ...console }
@@ -351,12 +350,6 @@ export class Logger {
                 message += `An unhandled rejection as occurred in a unknown file\n\t> ${error}`
                 embedMessage += `An unhandled rejection as occurred in a unknown file\n${error}`
             }
-        }
-
-        if (embedMessage.length >= 4096) {        
-            const paste = await this.pastebin.createPaste(embedTitle + "\n" + embedMessage)
-            console.log(paste?.getLink())
-            embedMessage = `[Pastebin of the error](https://rentry.co/${paste?.getLink()})`
         }
 
         if (logsConfig.error.console) this.console(chalkedMessage, 'error')

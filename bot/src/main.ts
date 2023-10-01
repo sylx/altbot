@@ -9,7 +9,7 @@ import { container } from "tsyringe"
 import { Server } from "@api/server"
 import { apiConfig, generalConfig, websocketConfig } from "@config"
 import { NoBotTokenError } from "@errors"
-import { Database, ErrorHandler, ImagesUpload, Logger, PluginsManager, WebSocket } from "@services"
+import { Database, ErrorHandler, Logger, PluginsManager, WebSocket } from "@services"
 import { initDataTable, resolveDependency } from "@utils/functions"
 import { clientConfig } from "./client"
 import { joinLastChannel } from './commands/General/join'
@@ -77,10 +77,10 @@ async function run() {
         }
 
         // upload images to imgur if configured
-        if (process.env.IMGUR_CLIENT_ID && generalConfig.automaticUploadImagesToImgur) {
-            const imagesUpload = await resolveDependency(ImagesUpload)
-            await imagesUpload.syncWithDatabase()
-        }
+        // if (process.env.IMGUR_CLIENT_ID && generalConfig.automaticUploadImagesToImgur) {
+        //     const imagesUpload = await resolveDependency(ImagesUpload)
+        //     await imagesUpload.syncWithDatabase()
+        // }
 
         setTimeout(async ()=>{
             await joinLastChannel(client)
