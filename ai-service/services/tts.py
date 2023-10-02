@@ -122,8 +122,8 @@ class Tts(tts_pb2_grpc.TtsServicer):
             audio = audio.astype(np.float32)
             audio = librosa.resample(audio, orig_sr=22050, target_sr=24000)
 
-            # 3秒ほど伸ばす
-            audio = np.concatenate([audio,np.zeros(24000*3,dtype=np.float32)])
+            # 1秒ほど伸ばす
+            audio = np.concatenate([audio,np.zeros(24000*1,dtype=np.float32)])
 
             # PCMデータにリバーブをかける
             audio = self.schroeder_reverb.filt(audio)

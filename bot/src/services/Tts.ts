@@ -16,10 +16,13 @@ import * as google_protobuf_empty_pb from "google-protobuf/google/protobuf/empty
 
 import { Readable } from "stream"
 import { VoiceChat } from "./VoiceChat"
+import { options } from "node-os-utils"
+import { I } from "ts-toolbelt"
 
 interface TtsSpeakOptions {
     useCache?: boolean,
-    silent?: boolean
+    silent?: boolean,
+    imediate?: boolean
 }
 
 @singleton()
@@ -31,11 +34,26 @@ export class Tts {
     constructor(
         @inject(delay(() => VoiceChat)) private voiceChat: VoiceChat,
     ) {
+        this.connect().then((client)=>{
+            console.log("connected tts server")
+        })
+    }
+    protected async connect(): Promise<TtsClient> {
         this.client=new TtsClient(
             "localhost:1234",
             grpc.credentials.createInsecure()
           )
+        return new Promise((resolve, reject) => {
+            this.client.waitForReady(Date.now() + 10000, (err) => {
+                if(err){
+                    reject(err)
+                }else{
+                    resolve(this.client)
+                }
+            })
+        })
     }
+
     getClient() : TtsClient{
         return this.client
     }
@@ -58,10 +76,10 @@ export class Tts {
             //ここで再生が終わった
             this.playQueue.shift()
             this.isPlaying=false
-            console.log("playend queue",this.playQueue.length)
+            //console.log("playend queue",this.playQueue.length)
             await this.playNextInQueue();
         }else{
-            console.log("queue empty")
+            console.log("queue is empty")
         }
     }
 
@@ -80,6 +98,10 @@ export class Tts {
             if(buffer && option?.silent !== false){
                 console.log("from cache",text)
                 const stream = Readable.from(buffer)
+                if(option?.imediate === true){
+                    this.getPlayer().stop()
+                    this.playQueue=[]
+                }
                 this.playQueue.push(stream)
                 return this.playNextInQueue();
             }
@@ -102,6 +124,10 @@ export class Tts {
                     }
                     console.log("queue",this.playQueue.length,response.getText())
                     if(option?.silent !== false){
+                        if(option?.imediate === true){
+                            this.getPlayer().stop()
+                            this.playQueue=[]
+                        }
                         this.playQueue.push(oggStream)
                         this.playNextInQueue()
                     }
