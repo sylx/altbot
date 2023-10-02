@@ -15,24 +15,24 @@ export default class SayCommand {
 	})
 	async say(
 		@SlashOption({ name: 'text', type: ApplicationCommandOptionType.String, required: true,description: "なんか言わせたいこと" }) text: string,
-		@SlashOption({ name: 'count', type: ApplicationCommandOptionType.Integer, required: false,description: "何回言わせるか" }) count: number,
+		@SlashOption({ name: 'count', type: ApplicationCommandOptionType.Integer, required: false,description: "何回言わせるか(1-10)" }) count: number,
 		interaction: CommandInteraction,
 		client: Client,
 		{ localize }: InteractionData
 	) {
 		const tts=await resolveDependency(Tts)
-		if(!count) count=1
+		if(!count || count < 1) count=1
 		if(count>10) count=10
-		const repeat = async (text: string, count: number) => {
-			await tts.speak(text,{useCache: true})
-			if(count>1) await repeat(text, count-1)
+		const repeat = async (text: string, count: number,initial_count: number) => {
+			await tts.speak(text,{useCache: initial_count != 1})
+			if(count>1) await repeat(text, count-1,initial_count)
 		}
 		try {
-			await repeat(text, count)
-			simpleSuccessEmbed(
+			await simpleSuccessEmbed(
 				interaction,
-				`言いました: ${text}`
+				`言います: ${text}`
 			)
+			await repeat(text, count, count)
 		}catch( err: any ){
 			if(err == "yet join voice channel"){
 				simpleErrorEmbed(
