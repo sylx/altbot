@@ -18,6 +18,10 @@ from libs.reverb import SchroederReverb
 
 from scipy.signal import butter, lfilter
 
+import psola
+import random
+from libs.tune import autotune
+
 def butter_lowpass(cutoff, fs, order=5):
     nyquist = 0.5 * fs
     normal_cutoff = cutoff / nyquist
@@ -66,7 +70,7 @@ class Tts(tts_pb2_grpc.TtsServicer):
         # リクエストを受け取る        
         wholeText = request.text
         # 分割する
-        sentences = self.splitText(wholeText,50)
+        sentences = self.splitText(wholeText,20)
         # 音声データを生成する
         for text in sentences:
             audio = await asyncio.get_running_loop().run_in_executor(self.pool, self.generateSpeech, text)
@@ -122,8 +126,15 @@ class Tts(tts_pb2_grpc.TtsServicer):
             audio = audio.astype(np.float32)
             audio = librosa.resample(audio, orig_sr=22050, target_sr=24000)
 
+            # ピッチを強制的に変更する frame_length=2048, hop_length=512
+            # audio = autotune(audio, 24000)
+
+            # base_pitch=librosa.midi_to_hz(50 + random.randint(-1, 1)*3)
+            # pitchs = np.array([base_pitch] * (int(len(audio)/512)+1),dtype=np.float32)
+            # audio = psola.vocode(audio, sample_rate=24000, target_pitch=pitchs, fmin=20.0, fmax=5000.0)
+
             # 1秒ほど伸ばす
-            audio = np.concatenate([audio,np.zeros(24000*1,dtype=np.float32)])
+            audio = np.concatenate([audio,np.zeros(int(24000/2),dtype=np.float32)])
 
             # PCMデータにリバーブをかける
             audio = self.schroeder_reverb.filt(audio)
