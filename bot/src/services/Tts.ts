@@ -1,18 +1,16 @@
 
 import * as grpc from "@grpc/grpc-js"
-import { delay, inject, singleton } from "tsyringe"
+import { delay, inject, singleton,injectable } from "tsyringe"
 import { TtsClient } from "../../grpc/tts_grpc_pb"
 
 import {
-    VoiceConnection, createAudioPlayer,AudioPlayer,
-    createAudioResource, StreamType,
-    VoiceConnectionStatus, entersState,VoiceConnectionState,
-    AudioPlayerStatus, getVoiceConnections, PlayerSubscription,
+    AudioPlayer,
+    createAudioResource, StreamType, entersState, AudioPlayerStatus
 } from "@discordjs/voice"
 
 
-import { TtsSpeakRequest,TtsSpeakResponse,TtsSpeakerInfoList,TtsSpeakerSelect } from "../../grpc/tts_pb"
-import * as google_protobuf_empty_pb from "google-protobuf/google/protobuf/empty_pb";
+import { TtsSpeakRequest, TtsSpeakResponse, TtsSpeakerInfoList, TtsSpeakerSelect } from "../../grpc/tts_pb"
+import * as google_protobuf_empty_pb from "google-protobuf/google/protobuf/empty_pb"
 
 import { Readable } from "stream"
 import { VoiceChat } from "./VoiceChat"
@@ -24,6 +22,7 @@ interface TtsSpeakOptions {
 }
 
 @singleton()
+@injectable()
 export class Tts {
     public client : TtsClient
     public playQueue : Array<Readable> = []
