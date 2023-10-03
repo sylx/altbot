@@ -29,7 +29,7 @@ async def serve():
     server = grpc.aio.server()
 
     # ThreadPoolを作成する
-    pool = concurrent.futures.ThreadPoolExecutor(max_workers=4)
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=6)
 
     # Serverオブジェクトに定義したServicerクラスを登録する
     transcription_pb2_grpc.add_TranscriptionServicer_to_server(Transcription(pool), server)

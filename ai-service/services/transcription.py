@@ -13,6 +13,7 @@ from libs.vad import VAD
 
 from memory_profiler import profile
 import json
+import threading
 
 class Transcription(transcription_pb2_grpc.TranscriptionServicer):
     """
@@ -154,6 +155,12 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         print("terminated")
     
     def transcribe(self,model=None,audio=b"",results=[],prefix="",prompt="",speaker_id="",start_timestamp=0):
+        threading.current_thread().name = "transcribe"
+        # 再入禁止
+        lock = threading.Lock()
+        if lock.acquire(blocking=True,timeout=10) == False:
+            raise Exception("lock timeout in transcribe")
+
         # soundfileとlibrosaを使ってpcmを16000Hzのndarrayに変換する
         soundfile=sf.SoundFile(io.BytesIO(audio),mode='r',format='RAW',subtype='PCM_16',channels=1,samplerate=48000)
         audio,_ = librosa.load(soundfile,sr=16000,mono=True)
@@ -194,4 +201,6 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
                 },
                 opusData=opus
             ))
+        lock.release()
+
         
