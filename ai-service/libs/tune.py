@@ -29,7 +29,7 @@ def closest_pitch(f0):
     return librosa.midi_to_hz(midi_note)
 
 
-def closest_pitch_from_scale(f0, scale):
+def closest_pitch_from_scale(f0, scale,shift=0):
     """Return the pitch closest to f0 that belongs to the given scale"""
     # Preserve nan.
     if np.isnan(f0):
@@ -45,15 +45,16 @@ def closest_pitch_from_scale(f0, scale):
     degree_difference = degree - degrees[degree_id]
     # Shift the input MIDI note number by the calculated difference.
     midi_note -= degree_difference
+    midi_note += shift
     # Convert to Hz.
     return librosa.midi_to_hz(midi_note)
 
 
-def aclosest_pitch_from_scale(f0, scale):
+def aclosest_pitch_from_scale(f0, scale,shift=0):
     """Map each pitch in the f0 array to the closest pitch belonging to the given scale."""
     sanitized_pitch = np.zeros_like(f0)
     for i in np.arange(f0.shape[0]):
-        sanitized_pitch[i] = closest_pitch_from_scale(f0[i], scale)
+        sanitized_pitch[i] = closest_pitch_from_scale(f0[i], scale,shift=shift)
     # Perform median filtering to additionally smooth the corrected pitch.
     smoothed_sanitized_pitch = sig.medfilt(sanitized_pitch, kernel_size=11)
     # Remove the additional NaN values after median filtering.
@@ -62,7 +63,7 @@ def aclosest_pitch_from_scale(f0, scale):
     return smoothed_sanitized_pitch
 
 
-def autotune(audio, sr):
+def autotune(audio, sr,scale,shift=0):
     # Set some basis parameters.
     frame_length = 2048
     hop_length = frame_length // 4
@@ -78,7 +79,7 @@ def autotune(audio, sr):
                                                          fmax=fmax)
 
     #correction_function = closest_pitch
-    correction_function=partial(aclosest_pitch_from_scale, scale="C:min")
+    correction_function=partial(aclosest_pitch_from_scale, scale=scale,shift=shift)
 
 
     # Apply the chosen adjustment strategy to the pitch.

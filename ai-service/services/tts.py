@@ -33,6 +33,17 @@ def butter_lowpass_filter(data, cutoff, fs, order=5):
     y = lfilter(b, a, data)
     return y
 
+def butter_bandpass(lowcut, highcut, fs, order=5):
+    nyq = 0.5 * fs
+    low = lowcut / nyq
+    high = highcut / nyq
+    b, a = butter(order, [low, high], btype='band')
+    return b, a
+
+def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
+    b, a = butter_bandpass(lowcut, highcut, fs, order=order)
+    y = lfilter(b, a, data)
+    return y
 
 class Tts(tts_pb2_grpc.TtsServicer):
    
@@ -126,12 +137,14 @@ class Tts(tts_pb2_grpc.TtsServicer):
             audio = audio.astype(np.float32)
             audio = librosa.resample(audio, orig_sr=22050, target_sr=24000)
 
-            # ピッチを強制的に変更する frame_length=2048, hop_length=512
-            # audio = autotune(audio, 24000)
+            # ピッチをGladosぽくする
+            # filtered_audio=butter_bandpass_filter(audio, 500, 4250, 24000)            
+            # audio = autotune(audio, 24000,"C:min",0) + autotune(filtered_audio, 24000,"C:min",random.randint(-3, 3))
 
             # base_pitch=librosa.midi_to_hz(50 + random.randint(-1, 1)*3)
             # pitchs = np.array([base_pitch] * (int(len(audio)/512)+1),dtype=np.float32)
             # audio = psola.vocode(audio, sample_rate=24000, target_pitch=pitchs, fmin=20.0, fmax=5000.0)
+            # audio = audio2 + audio3
 
             # 1秒ほど伸ばす
             audio = np.concatenate([audio,np.zeros(int(24000/2),dtype=np.float32)])
