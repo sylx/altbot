@@ -1,13 +1,13 @@
-import { ApplicationCommandOptionType, Channel, CommandInteraction, VoiceChannel, ClientVoiceManager, Snowflake, ChannelType, TextBasedChannel, Message, Guild, GuildMember } from "discord.js"
+import { CommandInteraction, VoiceChannel, Snowflake, TextBasedChannel, GuildMember, AttachmentBuilder } from "discord.js"
 import { Client } from "discordx"
 
 import { Discord, Guard, Slash, SlashGroup } from "@decorators"
 import { Category } from "@discordx/utilities"
 import { Disabled } from "@guards"
-import { simpleSuccessEmbed,simpleErrorEmbed, resolveDependencies} from "@utils/functions"
+import { simpleSuccessEmbed, simpleErrorEmbed } from "@utils/functions"
 
-import { Data, NgWord, NgWordHistory } from "@entities"
-import { Database, Gpt,TranscribedData,VoiceLog } from "@services"
+import { NgWord, NgWordHistory } from "@entities"
+import { Database, Gpt, TranscribedData, VoiceLog } from "@services"
 import { resolveDependency } from "@utils/functions"
 import { VoiceChat } from "../../services/VoiceChat"
 import { Tts } from "../../services/Tts"
@@ -188,6 +188,35 @@ export default class TranscribeCommand {
 		)
 		tts.speak("NGワードの監視を開始します")
 	}
+
+	@Slash({
+		description: "音声パケットリストを出力します（デバッグ用)",
+		name: 'dump'
+	})
+	@Guard(
+		Disabled
+	)
+	async dump(
+		interaction: CommandInteraction,
+		client: Client,
+		{ localize }: InteractionData
+	){
+		const voiceChat = await resolveDependency(VoiceChat)
+		const transcription = await resolveDependency(Transcription)
+
+		const buffer=await transcription.getPacketDump(
+			voiceChat.getConnection() as VoiceConnection,
+			interaction.member as GuildMember
+		)
+		console.log("dump",buffer.length,buffer.subarray(0,10))
+		const attachment = new AttachmentBuilder(buffer)
+		attachment.setName(`dump-${interaction.user.username}-${Date.now()}.bin`)		
+		interaction.followUp({
+			files: [attachment],
+			content: "ダンプしました"
+		})
+	}
+
 }
 
 

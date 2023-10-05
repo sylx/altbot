@@ -19,11 +19,12 @@ const SEND_PACKET_NUM = 10
 
 export class TranscriptionWriteStream extends Writable{
     protected packetList : DiscordOpusPacketList | null = null
+    protected packetDump : Array<DiscordOpusPacket> = []
     constructor(
-        protected api_bi_stream : grpc.ClientDuplexStream<DiscordOpusPacketList,TranscriptionEvent>,
+        protected api_bi_stream : grpc.ClientDuplexStream<DiscordOpusPacketList,TranscriptionEvent> | null,
         protected speaker_id: string,
         protected prompt: string = "",
-        protected save_to_file: string | null = null
+        protected keepPacket: boolean = false
     ){ 
         super()
     }
@@ -55,12 +56,17 @@ export class TranscriptionWriteStream extends Writable{
         //console.log("flush",is_final ? "final" : "",this.packetList.getPacketsList().length,"packets")
         process.stdout.write(is_final ? "!" : ".")
         
-        // 保存する場合は、送らずクリアもしない
-        if(this.save_to_file !== null) return null
 
-        if(!this.api_bi_stream.write(this.packetList)){
-            //err = new Error("write error")
-            console.error("write error")
+        if(this.api_bi_stream){
+            if(!this.api_bi_stream.write(this.packetList)){
+                //err = new Error("write error")
+                console.error("write error")
+            }
+        }
+        if(this.keepPacket){
+            this.packetList.getPacketsList().forEach((packet)=>{
+                this.packetDump.push(packet)
+            })
         }
         this.packetList = null
         return null
@@ -68,14 +74,19 @@ export class TranscriptionWriteStream extends Writable{
 
     _final(callback: (error?: Error | null) => void): void {
         this._flush(true)
-        if(this.save_to_file !== null && this.packetList !== null){
-            console.log("write to file",this.save_to_file)
-            // this.packetListをファイルに書き出す
-            writeFileSync(this.save_to_file,
-                    Buffer.from(this.packetList.serializeBinary()),
-                    {encoding:"binary"})
-        }
         callback()
+    }
+    //一つのpacketListにまとめて返す
+    getPacketDump() : Buffer{
+        const packet_list=new DiscordOpusPacketList()
+        this.packetDump.map((packet)=>{
+            packet_list.addPackets(packet)
+        })
+        //一応
+        packet_list.setSpeakerId(this.speaker_id)
+        packet_list.setPrompt(this.prompt)
+        packet_list.setIsFinal(true)
+        return Buffer.from(packet_list.serializeBinary())
     }
 }
 
@@ -139,6 +150,38 @@ export class Transcription {
             }
         })
     }
+
+    getPacketDump(connection: VoiceConnection,member: GuildMember) : Promise<Buffer>{
+        let already_listen = false
+        return new Promise((resolve,reject)=>{
+            const receiver = connection.receiver;            
+            receiver.speaking.once('start', async (userId) => {
+                if(userId !== member.user.id) return
+                if(already_listen) return
+                console.log("write start")
+                already_listen = true
+                const write_stream = new TranscriptionWriteStream(null as any,userId,"",true)
+                const opusStream=receiver.subscribe(userId, {
+                    end: {
+                        behavior: EndBehaviorType.AfterSilence,
+                        duration: 1000,
+                    },  
+                })
+                opusStream
+                .pipe(write_stream as TranscriptionWriteStream)
+                .on("finish",async ()=>{
+                    console.log("write end")
+                    already_listen = false
+                    resolve(write_stream.getPacketDump())
+                })
+                .on("error",(err)=>{
+                    console.error(err)
+                    reject(err)
+                })
+            })
+        })
+    }
+
     async stopListen() : Promise<void>{
         this.api_stream?.end()
         this.api_stream=null

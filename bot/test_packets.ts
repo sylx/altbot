@@ -12,10 +12,16 @@ const client = new TranscriptionClient(
     grpc.credentials.createInsecure()
 )
 
-function generatePackets(filename: string): Array<any>{
+function generatePackets(filename: string,repeat?: number): Array<any>{
     const binary = fs.readFileSync(filename)
     const packetList = DiscordOpusPacketList.deserializeBinary(binary)
-    return [0,1,2,3].map(i=>{
+    const seq=[0]
+    if(repeat && repeat > 1){
+        for(let i=1;i<repeat;i++){
+            seq.push(i)
+        }
+    }
+    return seq.map(i=>{
         return packetList.getPacketsList().map((packet : DiscordOpusPacket)=>{
         return Buffer.from(packet.getData())
     })
@@ -73,8 +79,8 @@ async function streamTest(speaker_id: string,packets: Array<any>,delay: number){
 
 
 Promise.all([
-    streamTest("test-0",generatePackets("test.1695559785657.bin"),0),
-    streamTest("test-1",generatePackets("test.1695559793540.bin"),3000),
+    streamTest("test-0",generatePackets("dump-jigoku3dayu-1696511950609.bin"),0),
+    //streamTest("test-1",generatePackets("dump-jigoku3dayu-1696511968012.bin"),3000),
 ]).then(()=>{
     console.log("end")
     process.exit(0)
