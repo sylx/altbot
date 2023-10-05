@@ -1,42 +1,39 @@
 import { ApplicationCommandOptionType, Channel, CommandInteraction, VoiceChannel, ClientVoiceManager, Snowflake, ChannelType, TextBasedChannel, Message, Guild, GuildMember } from "discord.js"
 import { Client } from "discordx"
 
-import { Discord, Guard, Slash, SlashOption } from "@decorators"
+import { Discord, Guard, Slash, SlashGroup } from "@decorators"
+import { Category } from "@discordx/utilities"
 import { Disabled } from "@guards"
 import { simpleSuccessEmbed,simpleErrorEmbed, resolveDependencies} from "@utils/functions"
 
 import { Data, NgWord, NgWordHistory } from "@entities"
-import { Database, Gpt } from "@services"
+import { Database, Gpt,TranscribedData,VoiceLog } from "@services"
 import { resolveDependency } from "@utils/functions"
 import { VoiceChat } from "../../services/VoiceChat"
 import { Tts } from "../../services/Tts"
 import { Transcription } from "../../services/Transcription"
 import { VoiceConnection } from "@discordjs/voice"
-import { Readable } from "stream"
 import { botNames } from "@config"
+import { injectable } from "tsyringe"
 
 
 const COMBINED_LOG_DURATION = 5*60*1000 //5分
 
-export interface TranscribedData{
-    id: string,
-    timestamp: number,
-    member: GuildMember,
-    text: string,
-    written: Message | undefined,
-}
-
 @Discord()
+@injectable()
+@Category('General')
+@SlashGroup({ name: "transcribe",description: "聞き取り機能関連" })
+@SlashGroup("transcribe")
 export default class TranscribeCommand {
 
 	@Slash({
-		description: "会話を聞き取ります",
-		name: 'transcribe'
+		description: "会話の聞き取りを開始します",
+		name: 'start'
 	})
 	@Guard(
 		Disabled
 	)
-	async join(
+	async start(
 		// @SlashOption({ name: 'channel', type: ApplicationCommandOptionType.Channel, 
 		// 	channelTypes: [ChannelType.GuildText], required: true,
 		// 	description: "聞き取り結果を書き出すところ"
@@ -49,7 +46,7 @@ export default class TranscribeCommand {
 		const voiceChat = await resolveDependency(VoiceChat)
 		const transcription = await resolveDependency(Transcription)
 		const tts = await resolveDependency(Tts)
-		const dataRepository = db.get(Data)
+		const voiceLog = await resolveDependency(VoiceLog)
 		const ngword_db = db.get(NgWord)
 		const ngword_history_db = db.get(NgWordHistory)
 		const gpt = await resolveDependency(Gpt)
@@ -62,7 +59,17 @@ export default class TranscribeCommand {
 			return
 		}
 		const targetChannel=interaction.channel
+		voiceLog.setChannel(targetChannel as TextBasedChannel)
+
 		const dialogState : {[key: string]: Boolean} = {}
+
+		const aizuchi = ["はい","うん","はいはい"]
+		const doui = ["その通りです","わかります","そうですね"]
+		const shazai=["すみません","ごめんなさい","申し訳ありません"]	
+		await Promise.all([...doui,...aizuchi,...shazai].map((text)=>{
+			return tts.speak(text,{useCache: true,silent: true})
+		}))
+		console.log("generated")
 
 		transcription.on("transcription",async (data: any)=>{
 			const member = voiceChat.getChannel()?.guild.members.cache.get(data.speaker_id) as GuildMember
@@ -73,20 +80,31 @@ export default class TranscribeCommand {
 				member.user.username
 			])
 
+			if(data.speaker_id === interaction.user.id){
+				let aiz = aizuchi[Math.floor(Math.random()*aizuchi.length)]
+				if(data.text.match(/(?:ね|？|だろ)/)){
+					aiz = doui[Math.floor(Math.random()*doui.length)]
+				}
+				if(data.text.match(/(?:君は|くれる|わかって|聞いて)/)){
+					aiz = shazai[Math.floor(Math.random()*shazai.length)]
+				}
+				tts.speak(aiz,{useCache: true})
+			}
+
+
 			if(dialogState[data.speaker_id]){
 				dialogState[data.speaker_id] = false
 
 				const result = await gpt.makeRealtimeReaction(data.text)
 				if(result === null) return
 				const reply_text=result.reply_text.replace(/{username}/g,member.displayName)
-				appendLog({
+				voiceLog.appendLog({
 					id: [data.packet_timestamp,data.speaker_id].join("_"),
 					timestamp: data.begin,
 					member,
 					text: data.text + " <- " + reply_text,
 					written: undefined
 				})
-				outputLog(targetChannel as TextBasedChannel)
 				await tts.speak(reply_text)
 
 				const prize_point = Math.floor(Math.pow((result.hostile_score - 5),(result.hostile_score > 5 ? 2.5 : 2)) * (result.hostile_score > 5 ? 1 : -1))
@@ -96,7 +114,7 @@ export default class TranscribeCommand {
 				}else{
 					prize_text = `あなたのカルマは${Math.abs(prize_point)}ポイント減少します。良かったね！`					
 				}
-				appendLog({
+				voiceLog.appendLog({
 					id: [data.packet_timestamp,member_me.id].join("_"),
 					timestamp: data.begin,
 					member: member_me,
@@ -106,7 +124,6 @@ export default class TranscribeCommand {
 				await ngword_history_db.addHistory(data.speaker_id,prize_point > 0 ? "😠" : "🤗",prize_point)
 				tts.speak(prize_text)
 				//ログの出力
-				outputLog(targetChannel as TextBasedChannel)
 				return
 			}
 
@@ -149,13 +166,12 @@ export default class TranscribeCommand {
 				// tts.playQueue.push(Readable.from(opusBuffer))
 				// tts.playNextInQueue()
 	
-				appendLog(transcribed)
+				voiceLog.appendLog(transcribed)
 				//ログの出力
-				outputLog(targetChannel as TextBasedChannel)
 			}
 		})
 		voiceChat.on("disconnect",async ()=>{
-			clearLog()
+			voiceLog.clearLog()
 		})
 
 		await transcription.startListen(
@@ -176,75 +192,3 @@ export default class TranscribeCommand {
 
 
 
-const transcribedLogs: Array<TranscribedData> = []
-const transcribedLogsLimit = 100
-
-function appendLog(log : TranscribedData){
-	const index = transcribedLogs.findIndex((item) => item.id === log.id)
-	if(index >= 0){
-		const old = transcribedLogs[index]
-		log.written = old.written
-		transcribedLogs[index] = log
-		console.log("update log",log.id)
-		if(old.written){
-			// 既に書き出されているので修正する
-			const msg=old.written
-			const logInMessage = transcribedLogs.filter(item=>item.written?.id === msg.id)
-			msg.edit(createLogText(logInMessage)).then(()=>{
-				console.log(`edit ${msg.id}`)
-			})
-		}
-	}else{
-		console.log("append log",log.id)
-		transcribedLogs.push(log)
-	}
-	while(transcribedLogs.length > transcribedLogsLimit){
-		transcribedLogs.shift()
-	}
-	console.log("log length",transcribedLogs.length)
-}
-
-function clearLog(){
-	transcribedLogs.length = 0
-}
-
-let last_msg : Message<boolean> | null = null
-
-async function outputLog(targetChannel?: TextBasedChannel){
-	const logToBeSent=transcribedLogs.filter(item=>!item.written)
-	const logToBeSentLength = logToBeSent.reduce((a,b)=>a+b.text.length,0)
-	const now = Date.now()
-	if(logToBeSent.length > 0){
-		const last_msg_log=last_msg ? transcribedLogs.filter(item=>item.written?.id === last_msg?.id) : null
-		if(last_msg && last_msg_log && last_msg_log.length < 10 && last_msg.content.length + logToBeSentLength < 2000){
-				//前回のメッセージに追加する
-				await last_msg.edit(createLogText(last_msg_log.concat(logToBeSent)))
-		}else{
-			// 新しいメッセージを作成する
-			const msg=
-				await targetChannel?.send(createLogText(logToBeSent)) as Message<boolean>
-			if(msg){
-				last_msg=msg
-			}
-		}
-		if(last_msg){
-			//送信済みをマーク
-			logToBeSent.forEach(log=>{
-				log.written=last_msg as Message<boolean>
-			})
-		}
-	}
-}
-
-function createLogText(logs: Array<TranscribedData>) : string{
-	const leftZeroPad = (num: number, length: number) => {
-		return (Array(length).join('0') + num).slice(-length);
-	}
-	const timeStr=(time_msec: number)=>{
-		const time = new Date(time_msec)
-
-		return `${leftZeroPad(time.getHours(),2)}:${leftZeroPad(time.getMinutes(),2)}:${leftZeroPad(time.getSeconds(),2)}`
-	}
-	return logs.sort((a,b)=>a.timestamp-b.timestamp)
-				.map(log=>`${timeStr(log.timestamp)} ${log.member.displayName} : ${log.text}`).join("\n")
-}
