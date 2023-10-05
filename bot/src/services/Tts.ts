@@ -92,7 +92,7 @@ export class Tts {
         }
         if(option?.useCache){
             const buffer=this.cache.get(text)
-            if(buffer && option?.silent !== false){
+            if(buffer && option?.silent !== true){
                 console.log("from cache",text)
                 const stream = Readable.from(buffer)
                 if(option?.imediate === true){
@@ -120,7 +120,7 @@ export class Tts {
                         this.cache.set(text,buffer)
                     }
                     console.log("queue",this.playQueue.length,response.getText())
-                    if(option?.silent !== false){
+                    if(option?.silent !== true){
                         if(option?.imediate === true && is_first){
                             is_first=false
                             this.getPlayer().stop()
