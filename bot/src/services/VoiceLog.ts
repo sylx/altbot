@@ -14,14 +14,13 @@ export interface TranscribedData{
     written?: Message<boolean> // 送信済みの場合は 出力済みMessage Object
 }
 
-
 @singleton()
 export class VoiceLog {
     protected transcribedLogs: Array<TranscribedData> = []
     protected readonly transcribedLogsLimit = 100
     protected targetChannel?: TextBasedChannel
     protected last_msg: Message<boolean> | null
-    constructor(channel: TextBasedChannel) {
+    constructor() {
         this.last_msg = null
     }
 
