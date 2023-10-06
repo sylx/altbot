@@ -90,6 +90,7 @@
     "saveqlite": "~1.1.2",
     "semver": "^7.3.7",
     "socket.io-client": "~4.5.2",
+    "speaker": "^0.5.4",
     "stacktrace-parser": "~0.1.10",
     "swagger-ui-express": "~4.5.0",
     "table": "^6.8.1",

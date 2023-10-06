@@ -164,7 +164,7 @@ export class Transcription {
                 const opusStream=receiver.subscribe(userId, {
                     end: {
                         behavior: EndBehaviorType.AfterSilence,
-                        duration: 1000,
+                        duration: 3000,
                     },  
                 })
                 opusStream
