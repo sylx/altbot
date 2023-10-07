@@ -76,6 +76,7 @@ class Tts(tts_pb2_grpc.TtsServicer):
                 "comb": True,
                 "ap":   True,
             })
+        self.lock = threading.Lock()
     
     async def SpeakStream(self, request, context):
         # リクエストを受け取る        
@@ -84,7 +85,7 @@ class Tts(tts_pb2_grpc.TtsServicer):
         sentences = self.splitText(wholeText,20)
         # 音声データを生成する
         for text in sentences:
-            audio = await asyncio.get_running_loop().run_in_executor(self.pool, self.generateSpeech, text)
+            audio = await asyncio.get_running_loop().run_in_executor(self.pool, self.generateSpeech, text,self.lock)
             yield tts_pb2.TtsSpeakResponse(audio=audio,text=text)
 
     def splitText(self, wholeText,minLength=10):
@@ -113,7 +114,7 @@ class Tts(tts_pb2_grpc.TtsServicer):
         return ret
 
 
-    def generateSpeech(self,text):
+    def generateSpeech(self,text,lock):
         threading.current_thread().name = "generateSpeech"
         print(f"generateSpeech {text}")
         length_scale, text = get_label_value(text, 'LENGTH', 1, 'length scale')
@@ -123,7 +124,6 @@ class Tts(tts_pb2_grpc.TtsServicer):
         stn_tst = get_text(text, self.hps_ms, cleaned=cleaned)
         with no_grad():
             # 再入禁止
-            lock = threading.Lock()
             if lock.acquire(blocking=True,timeout=10) == False:
                 raise Exception("lock timeout in generateSpeech")
             
