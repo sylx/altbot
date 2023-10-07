@@ -43,8 +43,8 @@ async function send(packets: Array<any>,writeStream : TranscriptionWriteStream){
     for(let p of packets){
         process.stdout.write(".")
         writeStream.write(p)
-        const samplesDecoded = encoder.decode(p);      
-        speaker.write(samplesDecoded)
+        //const samplesDecoded = encoder.decode(p);      
+        //speaker.write(samplesDecoded)
         await new Promise(resolve => setTimeout(resolve, 20));
     }
     // writeStreamへの書き込みが終了したことを伝える
@@ -57,7 +57,7 @@ async function streamTest(speaker_id: string,packets: Array<any>,delay: number){
     const api_stream = client.transcriptionBiStreams()
     const writeStream = new TranscriptionWriteStream(api_stream,speaker_id,prompt)
 
-    const transcribedAudio: Array<any>=[]
+    const transcribedAudio: {[key: string]: any} = {}
     const api_promise = new Promise((resolve,reject)=>{
         api_stream.on("data",(response : TranscriptionEvent)=>{
             //millisecond unix time to date(format YYYY/MM/DD hh:mm:ss.ms)
@@ -78,6 +78,7 @@ async function streamTest(speaker_id: string,packets: Array<any>,delay: number){
             switch(name){
                 case "transcription":
                     console.log("transcription",{
+                        ids: data.ids,
                         speaker_id: data.speaker_id,
                         begin: toDate(data.begin),
                         end: toDate(data.end),
@@ -85,15 +86,19 @@ async function streamTest(speaker_id: string,packets: Array<any>,delay: number){
                         packet_timestamp: toDate(data.packet_timestamp),
                         text: data.text
                     })
-                    transcribedAudio.push({
-                        packet_timestamp: data.packet_timestamp,
-                        text: data.text,
-                        duration: data.end - data.begin,
-                        opus: response.getOpusdata_asU8()
+                    data.ids.forEach((id : string)=>{
+                        transcribedAudio[id]= {
+                            id: id,
+                            packet_timestamp: data.packet_timestamp,
+                            text: data.text,
+                            duration: data.end - data.begin,
+                            opus: response.getOpusdata_asU8()
+                        }
                     })
                     break
                 case "vad":
                     console.log("vad",{
+                        id: data.id,
                         speaker_id: data.speaker_id,
                         timestamp: toDate(data.timestamp),
                         duration: data.duration
@@ -109,10 +114,10 @@ async function streamTest(speaker_id: string,packets: Array<any>,delay: number){
         }).on("end",async ()=>{
             console.log("api read end")
             //transcribedAudioを順に再生する
-            const funcs : Array<any>=transcribedAudio.sort((a,b)=>a.packet_timestamp-b.packet_timestamp).map((data)=>{
+            const funcs : Array<any>=Object.values(transcribedAudio).sort((a,b)=>a.packet_timestamp-b.packet_timestamp).map((data)=>{
                 return ()=>{
                     return new Promise((resolve,reject)=>{
-                        console.log("playing:",data.text)
+                        console.log(`playing ${data.id} ${data.text}`)
                         // buffer to stream                
                         const oggOpusBuffer=Buffer.from(data.opus)
                         const oggOpusStream = new Readable({
@@ -151,9 +156,9 @@ async function streamTest(speaker_id: string,packets: Array<any>,delay: number){
 
 
 Promise.all([
-    //streamTest("test-0",generatePackets("dump-jigoku3dayu-1696511950609.bin"),0),
-    //streamTest("test-1",generatePackets("dump-jigoku3dayu-1696511968012.bin"),3000),
-    streamTest("test-2",generatePackets("dump-jigoku3dayu-1696551798341.bin"),0),
+    streamTest("test-0",generatePackets("dump-jigoku3dayu-1696511950609.bin"),0),
+    streamTest("test-1",generatePackets("dump-jigoku3dayu-1696511968012.bin"),3000),
+    //streamTest("test-2",generatePackets("dump-jigoku3dayu-1696551798341.bin"),0),
 ]).then(()=>{
     console.log("end")
     process.exit(0)

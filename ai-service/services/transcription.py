@@ -5,6 +5,7 @@ import soundfile as sf
 import librosa
 import io
 import asyncio
+from pyee import AsyncIOEventEmitter
 
 import transcription_pb2
 import transcription_pb2_grpc
@@ -16,12 +17,6 @@ import json
 import threading
 
 class Transcription(transcription_pb2_grpc.TranscriptionServicer):
-    """
-    サービス定義から生成されたクラスを継承して、
-    定義したリモートプロシージャに対応するメソッドを実装する。
-    クライアントが引数として与えたメッセージに対応するオブジェクト
-    context引数にはRPCに関する情報を含むオブジェクトが渡される
-    """
    
     def __init__(self,pool) -> None:
         super().__init__()
@@ -34,132 +29,113 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         self.pool = pool
         self.decoder = Decoder()
         self.vad = {}
-        self.prefix = {}
-        self.audio_chunk = {}
+        self.voiced_frames = {}
         self.min_speech_sec = 1.5
         self.index = 0
+        self.ee = AsyncIOEventEmitter(asyncio.get_running_loop())
+        self.event_buffer=[]
+        self.futures=[]
+        self.lock=threading.Lock()
 
     def decodePacket(self,packet,vad,is_final=False):
-        chunks = []
         pcm = self.decoder.decode(packet.data)
         # pcmを1chにする
         pcm = np.frombuffer(pcm,dtype=np.int16)
         pcm = pcm.reshape(-1,2)[:,0].tobytes()
         
-        vad.addFrame(pcm,packet.timestamp)
-        if(vad.countFrames() > 50 or is_final):
-            segments=vad.getSpeech()
-            if segments is not None:
-                for i, chunk in enumerate(segments):
-                    print(f"found speech {len(chunk[0])} {chunk[1]}")
-                    chunks.append(chunk)
-                vad.clearFrames()
-        return chunks
+        vad.addFrame(pcm,packet.timestamp,final=is_final)
     
     def emit(self,eventName,eventData,opusData=None):
         dataJson=json.dumps(eventData)
 
-        if eventName == "transcription":
-            self.prefix[eventData["speaker_id"]] = eventData["text"]
-
-        return transcription_pb2.TranscriptionEvent(
-            eventName=eventName,
-            eventData=dataJson,
-            opusData=opusData
+        self.event_buffer.append(
+            transcription_pb2.TranscriptionEvent(
+                eventName=eventName,
+                eventData=dataJson,
+                opusData=opusData
+            )
         )
 
+    def createVAD(self,speaker_id):
+        self.vad[speaker_id] = VAD(48000,20,200,2,event_emitter=self.ee,speaker_id=speaker_id)
 
     async def TranscriptionBiStreams(self, request_iterator, context):
-        results = []
-        futures = []
-
+        speaker_id = ""
         async for request in request_iterator:
             packets = request.packets
             speaker_id = request.speaker_id
             prompt = request.prompt
-            audio_chunk = self.audio_chunk.get(speaker_id,None)
 
             # VADの作成
             if self.vad.get(speaker_id) is None:
-                self.vad[speaker_id] = VAD(48000,20,200,2)
+                self.createVAD(speaker_id)
             vad = self.vad[speaker_id]
+            self.ee.on("detect",self.onDetect)
 
-            #結果が来てたら送信する
-            if len(results) > 0:
-                for result in results:
-                    yield result
-                results = []
-
-            print(f"received {len(packets)} packets. {speaker_id}")
             if len(packets) > 0:
                 for i,packet in enumerate(packets):
                     is_final = request.is_final and i == len(packets)-1
-                    chunks = self.decodePacket(packet,vad,is_final)
-                    if len(chunks) == 0:
-                        continue
-                    # chunksを一つに
-                    vad_event_chunk = [b''.join([c[0] for c in chunks]),chunks[0][1],sum([c[2] for c in chunks])]
-                    yield self.emit("vad",{
-                        "speaker_id":speaker_id,
-                        "timestamp": vad_event_chunk[1],
-                        "duration": vad_event_chunk[2]
-                    })
-                    # 前回のを加えてchunksを一つに
-                    if audio_chunk is not None:
-                        chunks.insert(0,audio_chunk)
-
-                    audio_chunk = [b''.join([c[0] for c in chunks]),chunks[0][1],sum([c[2] for c in chunks])]
-
-                # VAD区間がない場合は次のリクエストに期待する
-                if audio_chunk is None:
-                    continue
-
-                self.audio_chunk[speaker_id] = audio_chunk
-
-                audio = audio_chunk[0]
-                start_timestamp = audio_chunk[1]
-                duration = audio_chunk[2]
-
-                if duration < self.min_speech_sec * 1000 and request.is_final is False:
-                    # 1.5秒以下の音声でまだ途中の場合、次のリクエストを待つ
-                    continue
-                
-                # 解析可能なので、audio_chunkをクリアする
-                self.audio_chunk[speaker_id] = None
-
-                # audio を　WAVファイルとして保存する
-                # sf.SoundFile(f"server_recv_{self.index}.wav",mode='w',format='WAV',subtype='PCM_16',channels=1,samplerate=48000).write(np.frombuffer(audio,dtype=np.int16))
-
-                print(f"transcribe start {duration} {is_final} {len(audio)}")
-                # thread poolを使用してtranscribeを実行する
-                futures.append(
-                    asyncio.get_running_loop().run_in_executor(self.pool, self.transcribe, 
-                                                            self.model, audio, results,self.prefix.get(speaker_id,""), prompt, speaker_id, start_timestamp)
-                )
-                self.index += 1
+                    self.decodePacket(packet,vad,is_final)
+            #tick
+            if len(self.event_buffer) > 0:
+                for event in self.event_buffer:
+                    yield event
+                self.event_buffer.clear()
 
             if request.is_final:
-                break  
-        if vad is not None:
-            vad.terminate()
+                break
+
         # futuresを待つ
-        for future in futures:
+        for future in self.futures:
             if future.done() is False:
                 await future
-                # 結果を送信する
-                if len(results) > 0:
-                    for result in results:
-                        yield result
-                    results = []
+            #tick
+            if len(self.event_buffer) > 0:
+                for event in self.event_buffer:
+                    yield event
+                self.event_buffer.clear()
+        self.voiced_frames[speaker_id] = None
+        print("terminated") 
 
-        print("terminated")
-    
-    def transcribe(self,model=None,audio=b"",results=[],prefix="",prompt="",speaker_id="",start_timestamp=0):
-        threading.current_thread().name = "transcribe"
+    def onDetect(self,voiced_frames):
+        self.emit("vad",{
+            "id": voiced_frames.id,
+            "speaker_id": voiced_frames.speaker_id,
+            "timestamp": voiced_frames.getBegin(),
+            "duration": voiced_frames.getDuration(),            
+        })
+        # 過去の音声と結合
+        if self.voiced_frames.get(voiced_frames.speaker_id) is None:
+            self.voiced_frames[voiced_frames.speaker_id] = [voiced_frames]
+        else:
+            self.voiced_frames[voiced_frames.speaker_id].append(voiced_frames)
+
+        # 音声解析にまわす
+        self.futures.append(
+            asyncio.get_running_loop().run_in_executor(
+                self.pool,
+                self.transcribe,
+                self.model,
+                "", # prompt
+                voiced_frames.speaker_id,
+                self.lock
+        ))
+
+    def transcribe(self,model=None,prompt="",speaker_id="",lock=None):
+        threading.current_thread().name = "transcribe_waiting"
         # 再入禁止
-        lock = threading.Lock()
         if lock.acquire(blocking=True,timeout=10) == False:
             raise Exception("lock timeout in transcribe")
+        threading.current_thread().name = "transcribe_executing"
+
+        # テキストの入っていない音声のみを対象にする
+        target_voiced_frames = [f for f in self.voiced_frames[speaker_id] if f.transcribed == False]
+        if len(target_voiced_frames) == 0:
+            lock.release()
+            return
+        
+        initial_prompt = prompt
+        audio = b''.join([f.getAudio() for f in target_voiced_frames])
 
         # soundfileとlibrosaを使ってpcmを16000Hzのndarrayに変換する
         soundfile=sf.SoundFile(io.BytesIO(audio),mode='r',format='RAW',subtype='PCM_16',channels=1,samplerate=48000)
@@ -168,39 +144,38 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         # 16000Hzのfloat32の無音(0)のndarrayを作成してaudioの前後に挿入する
         audio = np.concatenate([np.zeros(16000,dtype=np.float32),audio,np.zeros(16000,dtype=np.float32)])
         
-        print(f"transcribing {len(audio)} samples. prefix={prefix}")
+        print(f"transcribe start {len(audio)} samples. prompt={prompt}")
         segments,info = model.transcribe(audio,
                                             condition_on_previous_text=False,
-                                            prefix="",initial_prompt=prompt,
+                                            prefix="",initial_prompt=initial_prompt,
                                             compression_ratio_threshold=1.5,
-                                            beam_size=3,language="ja",vad_filter=False,temperature=[0.0,0.2],best_of=2)
+                                            beam_size=3,language="ja",vad_filter=False,temperature=[0.0,0.2],best_of=2,
+                                            word_timestamps=True)
         segments = list(segments) # generatorをlistに変換することでcoroutineを実行する
         if len(segments) > 0:
-            # debug dump
-            for segment in segments:
-                print(f"transcribed {len(segments)} segments {segment.start} {segment.end} {segment.text}")
-
-            first_segment = segments[0]
-            last_segment = segments[-1]
-
+            # voiced_framesにtextを設定する
             whole_text = ''.join([s.text for s in segments])
-
-            # audioをoggopus形式で保存しておく
+            # dump
+            for vf in target_voiced_frames:
+                vf.transcribed = True
+            # current_audioをoggopus形式で保存しておく
             opus = b''
             with io.BytesIO() as f:
                 sf.write(f, audio, 16000, format='OGG',subtype='OPUS')
                 opus = f.getvalue()
-            results.append(self.emit(
+
+            self.emit(
                 eventName="transcription",
                 eventData={
-                    "begin": start_timestamp+int(first_segment.start*1000),
-                    "end": start_timestamp+int(last_segment.end*1000),
-                    "packet_timestamp": start_timestamp,
-                    "text": whole_text,
-                    "speaker_id": speaker_id
+                        "ids": [f.id for f in target_voiced_frames],
+                        "begin": target_voiced_frames[0].getBegin(),
+                        "end": target_voiced_frames[-1].getEnd(),
+                        "packet_timestamp": target_voiced_frames[0].getBegin(),
+                        "text": whole_text,
+                        "speaker_id": speaker_id
                 },
                 opusData=opus
-            ))
-        lock.release()
-
+            )
         
+        lock.release()
+        threading.current_thread().name = "transcribe_done"
