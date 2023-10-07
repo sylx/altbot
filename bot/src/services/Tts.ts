@@ -98,6 +98,7 @@ export class Tts {
                 if(option?.imediate === true){
                     this.getPlayer().stop()
                     this.playQueue=[]
+                    this.isPlaying=false
                 }
                 this.playQueue.push(stream)
                 return this.playNextInQueue();

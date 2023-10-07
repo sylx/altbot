@@ -1,4 +1,4 @@
-import { CommandInteraction, VoiceChannel, Snowflake, TextBasedChannel, GuildMember, AttachmentBuilder } from "discord.js"
+import { CommandInteraction, VoiceChannel, Snowflake, TextBasedChannel, GuildMember, AttachmentBuilder, User } from "discord.js"
 import { Client } from "discordx"
 
 import { Discord, Guard, Slash, SlashGroup } from "@decorators"
@@ -61,76 +61,124 @@ export default class TranscribeCommand {
 		const targetChannel=interaction.channel
 		voiceLog.setChannel(targetChannel as TextBasedChannel)
 
-		const dialogState : {[key: string]: Boolean} = {}
+		let listenTo : User | null = null
+		let listenText : Array<any> = []
+		let listenToTimeout : NodeJS.Timeout | null = null
 
-		const aizuchi = ["はい","うん","はいはい"]
-		const doui = ["その通りです","わかります","そうですね"]
-		const shazai=["すみません","ごめんなさい","申し訳ありません"]	
-		await Promise.all([...doui,...aizuchi,...shazai].map((text)=>{
-			return tts.speak(text,{useCache: true,silent: true})
-		}))
-		console.log("generated")
+		interaction.reply({
+			content: "準備中..."
+		})
 
-		transcription.on("transcription",async (data: any)=>{
-			const member = voiceChat.getChannel()?.guild.members.cache.get(data.speaker_id) as GuildMember
-			const member_me = voiceChat.getChannel()?.guild.members.cache.get(client.user?.id as Snowflake) as GuildMember
-			console.log("member names",[
-				member.displayName,
-				member.nickname,
-				member.user.username
-			])
+		const aizuchi = ["はい","あー","んー","ほい","あっ","うーん"]
+		const doui = ["その通りです","わかります","そうですね","はい、聞いてます"]
+		const sokushin = ["聞いてます","はい","はい、聞いてます","はい、聞いてますよ","大丈夫です、続けて"]
+		const shazai=["すみません","誠にごめんなさい","ごめんなさい","申し訳ありません","すみませんでした"]
 
-			if(data.speaker_id === interaction.user.id){
+		//キャッシュ生成
+		const funcs=[...doui,...aizuchi,...shazai,...sokushin].map((text)=>{
+			return ()=>tts.speak(text,{useCache: true,silent: true})
+		}) as Array<()=>Promise<void>>
+		for(let f of funcs){
+			await f()
+		}
+
+		transcription.on("vad",async (data: any)=>{
+			if(data.speaker_id === listenTo?.id){
 				let aiz = aizuchi[Math.floor(Math.random()*aizuchi.length)]
-				if(data.text.match(/(?:ね|？|だろ)/)){
-					aiz = doui[Math.floor(Math.random()*doui.length)]
-				}
-				if(data.text.match(/(?:君は|くれる|わかって|聞いて)/)){
-					aiz = shazai[Math.floor(Math.random()*shazai.length)]
-				}
 				tts.speak(aiz,{useCache: true})
 			}
+		})
 
+		transcription.on("transcription",async (data: any)=>{
+			console.log("received",{
+				ids: data.ids,
+				speaker_id:data.speaker_id,
+				text: data.text
+			})
+			if(data.text.match(/ご視聴ありがとうございました/)) return
+			const member = voiceChat.getChannel()?.guild.members.cache.get(data.speaker_id) as GuildMember
+			const member_me = voiceChat.getChannel()?.guild.members.cache.get(client.user?.id as Snowflake) as GuildMember
 
-			if(dialogState[data.speaker_id]){
-				dialogState[data.speaker_id] = false
-
-				const result = await gpt.makeRealtimeReaction(data.text)
-				if(result === null) return
-				const reply_text=result.reply_text.replace(/{username}/g,member.displayName)
-				voiceLog.appendLog({
-					id: [data.packet_timestamp,data.speaker_id].join("_"),
-					timestamp: data.begin,
-					member,
-					text: data.text + " <- " + reply_text,
-					written: undefined
-				})
-				await tts.speak(reply_text)
-
-				const prize_point = Math.floor(Math.pow((result.hostile_score - 5),(result.hostile_score > 5 ? 2.5 : 2)) * (result.hostile_score > 5 ? 1 : -1))
-				let prize_text = ""
-				if(prize_point > 0){
-					prize_text = `あなたのカルマは${prize_point}ポイント増加します。自業自得だね！`
-				}else{
-					prize_text = `あなたのカルマは${Math.abs(prize_point)}ポイント減少します。良かったね！`					
+			if(data.speaker_id === listenTo?.id){
+				let aiz = null
+				if(data.text.match(/(?:よね|？|だろ)/)){
+					aiz = doui[Math.floor(Math.random()*doui.length)]
 				}
-				voiceLog.appendLog({
-					id: [data.packet_timestamp,member_me.id].join("_"),
-					timestamp: data.begin,
-					member: member_me,
-					text: prize_text,
-					written: undefined
-				})
-				await ngword_history_db.addHistory(data.speaker_id,prize_point > 0 ? "😠" : "🤗",prize_point)
-				tts.speak(prize_text)
-				//ログの出力
+				if(data.text.match(/(?:え？|違う|聞)/)){
+					aiz = sokushin[Math.floor(Math.random()*sokushin.length)]
+				}
+				if(data.text.match(/(?:お前|あなた|君|考え|くれる|わかって|のか|だろ|がよ|わかる)/)){
+					aiz = shazai[Math.floor(Math.random()*shazai.length)]
+				}
+				if(aiz){
+					tts.speak(aiz,{useCache: true,imediate: true})
+				}
+				const toUpdateIndex = listenText.findIndex(item=>item.packet_timestamp === data.packet_timestamp)
+				if(toUpdateIndex > -1){
+					listenText[toUpdateIndex] = data
+				}else{
+					listenText.push(data)
+				}
+				const reply=async ()=>{
+					if(listenText.length > 0){
+						listenTo=null
+						const question = listenText.map(data=>data.text).join("、")
+						listenText=[]
+						tts.speak("うーんちょっと待って。整理するね。どうなんだろね。それは",{useCache: true,imediate: true})
+						voiceLog.appendLog({
+							id: [Date.now(),data.speaker_id].join("_"),
+							timestamp: data.begin,
+							member,
+							text: question,
+							written: undefined
+						})
+						const result = await gpt.makeRealtimeReaction(question)
+						if(result === null) return
+						const reply_text=result.reply_text.replace(/{username}/g,member.displayName)
+						voiceLog.appendLog({
+							id: [Date.now(),member_me.id].join("_"),
+							timestamp: data.begin,
+							member: member_me,
+							text: reply_text,
+							written: undefined
+						})
+						await tts.speak(reply_text,{imediate: true})
+
+						const prize_point = Math.floor(Math.pow((result.hostile_score - 5),(result.hostile_score > 5 ? 2.5 : 2)) * (result.hostile_score > 5 ? 1 : -1))
+						let prize_text = ""
+						if(prize_point > 0){
+							prize_text = `あなたのカルマは${prize_point}ポイント増加します。自業自得だね！`
+						}else{
+							prize_text = `あなたのカルマは${Math.abs(prize_point)}ポイント減少します。良かったね！`					
+						}
+						voiceLog.appendLog({
+							id: [Date.now(),member_me.id].join("_"),
+							timestamp: data.begin,
+							member: member_me,
+							text: prize_text,
+							written: undefined
+						})
+						await ngword_history_db.addHistory(data.speaker_id,prize_point > 0 ? "😠" : "🤗",prize_point)
+						await tts.speak(prize_text)
+						interaction.editReply({
+							content: "聞き取り中..."
+						})
+					}
+				}
+				if(listenToTimeout){
+					clearTimeout(listenToTimeout)
+				}
+				listenToTimeout=setTimeout(reply,5000)
 				return
 			}
 
 			const botNamesRegex = new RegExp(`(${botNames.join("|")})`)
 			if(botNamesRegex.test(data.text)){
 				await tts.speak(`${member.displayName}、何ですか？ゆっくり話してください`)
-				dialogState[data.speaker_id] = true
+				listenTo = member.user
+				interaction.editReply({
+					content: `${member.displayName}のお言葉を傾聴しています`
+				})
 				return
 			}
 
@@ -180,13 +228,12 @@ export default class TranscribeCommand {
 			async ()=>{
 				const ngwords=await ngword_db.getNgWords()
 				return [...ngwords,...botNames,"ご視聴ありがとうございました"].join("、")
-			})
+			}) // prompt
 
-		simpleSuccessEmbed(
-			interaction,
-			"NGワードの監視を開始します"
-		)
-		tts.speak("NGワードの監視を開始します")
+		interaction.editReply({
+			content: "聞き取りを開始しました"
+		})
+		tts.speak("聞き取りを開始しました")
 	}
 
 	@Slash({

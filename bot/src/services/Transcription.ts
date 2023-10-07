@@ -116,7 +116,7 @@ export class Transcription {
             this.api_stream = null
         })
         .on("data", (response : TranscriptionEvent) => {
-            console.log("from server",response.getEventname(),response.getEventdata(),response.getOpusdata().length)
+            //console.log("from server",response.getEventname(),response.getEventdata(),response.getOpusdata().length)
             try {
                 const data=JSON.parse(response.getEventdata())
                 data.opusData=response.getOpusdata()
