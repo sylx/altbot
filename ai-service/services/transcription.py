@@ -35,7 +35,6 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         self.transcribed_history = {}
         self.min_speech_sec = 1.5
         self.index = 0
-        self.ee = AsyncIOEventEmitter(asyncio.get_running_loop())
         self.event_buffer=[]
         self.lock=threading.Lock()
 
@@ -59,7 +58,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         )
 
     def createVAD(self,speaker_id):
-        self.vad[speaker_id] = VAD(48000,20,200,2,event_emitter=self.ee,speaker_id=speaker_id)
+        self.vad[speaker_id] = VAD(48000,20,200,2,speaker_id=speaker_id)
 
     async def TranscriptionBiStreams(self, request_iterator, context):
         speaker_id = ""
@@ -75,33 +74,35 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
             vad = self.vad[speaker_id]
             vad.prompt=prompt
             #handler = functools.partial(self.onDetect,prompt=prompt)
-            self.ee.add_listener("detect",self.onDetect)
+            vad.event_emitter.add_listener("detect",self.onDetect)
 
             if len(packets) > 0:
                 for i,packet in enumerate(packets):
                     is_final = request.is_final and i == len(packets)-1
                     self.decodePacket(packet,vad,is_final)
-            #tick
+            #tick event
             if len(self.event_buffer) > 0:
                 for event in self.event_buffer:
                     yield event
                 self.event_buffer.clear()
 
             if request.is_final:
-                self.ee.remove_listener("detect",self.onDetect)
+                vad.event_emitter.remove_listener("detect",self.onDetect)
                 break
 
         # futuresを待つ
         for future in vad.futures:
             if future.done() is False:
                 await future
-            #tick
+            #tick event
             if len(self.event_buffer) > 0:
                 for event in self.event_buffer:
                     yield event
                 self.event_buffer.clear()
+            
         self.voiced_frames[speaker_id] = None
         print("terminated") 
+
 
     def onDetect(self,voiced_frames=None,prompt="",futures=None):
         if voiced_frames is None:
@@ -121,6 +122,8 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
 
         if len(futures) > 1:
             # すでに待機中のスレッドがあるので新たに投入しない
+            # なお、futuresが1の場合は処理中の場合と待機中の場合があるが、
+            # 待機中に投入しても実害はないので、投入する
             return
         # 音声解析にまわす
         future=asyncio.get_running_loop().run_in_executor(

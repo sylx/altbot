@@ -1,7 +1,7 @@
 import webrtcvad
 import collections
-import sys
 import uuid
+import asyncio
 from pyee import AsyncIOEventEmitter
 import time
 
@@ -37,7 +37,7 @@ class VoicedFrames(object):
         
 class VAD():
 
-    def __init__(self,sample_rate,frame_duration_ms=20, padding_duration_ms=200, aggressiveness=2,event_emitter : AsyncIOEventEmitter=None,speaker_id=""):
+    def __init__(self,sample_rate,frame_duration_ms=20, padding_duration_ms=200, aggressiveness=2,speaker_id=""):
         self.sample_rate=sample_rate
         self.speaker_id=speaker_id
         self.vad=webrtcvad.Vad(aggressiveness)
@@ -46,7 +46,7 @@ class VAD():
         self.frames=[]
         self.timestamp=0.0
         self.left_audio=b''
-        self.event_emitter=event_emitter
+        self.event_emitter=AsyncIOEventEmitter(asyncio.get_running_loop())        
         self.now_voiced=False
 
         self.prompt=""
