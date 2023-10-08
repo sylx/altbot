@@ -15,6 +15,7 @@ from libs.vad import VAD
 from memory_profiler import profile
 import json
 import threading
+import time
 import functools
 
 class Transcription(transcription_pb2_grpc.TranscriptionServicer):
@@ -22,7 +23,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
     def __init__(self,pool) -> None:
         super().__init__()
         self.model=WhisperModel(
-            "medium",
+            "small",
             device="cuda",
             compute_type="float32",
             download_root="./.model_cache",
@@ -36,7 +37,6 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         self.index = 0
         self.ee = AsyncIOEventEmitter(asyncio.get_running_loop())
         self.event_buffer=[]
-        self.futures=[]
         self.lock=threading.Lock()
 
     def decodePacket(self,packet,vad,is_final=False):
@@ -63,6 +63,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
 
     async def TranscriptionBiStreams(self, request_iterator, context):
         speaker_id = ""
+        vad = None
         async for request in request_iterator:
             packets = request.packets
             speaker_id = request.speaker_id
@@ -91,7 +92,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
                 break
 
         # futuresを待つ
-        for future in self.futures:
+        for future in vad.futures:
             if future.done() is False:
                 await future
             #tick
@@ -102,7 +103,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         self.voiced_frames[speaker_id] = None
         print("terminated") 
 
-    def onDetect(self,voiced_frames=None,prompt=""):
+    def onDetect(self,voiced_frames=None,prompt="",futures=None):
         if voiced_frames is None:
             return
         
@@ -118,6 +119,9 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         else:
             self.voiced_frames[voiced_frames.speaker_id].append(voiced_frames)
 
+        if len(futures) > 1:
+            # すでに待機中のスレッドがあるので新たに投入しない
+            return
         # 音声解析にまわす
         future=asyncio.get_running_loop().run_in_executor(
                 self.pool,
@@ -127,15 +131,17 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
                 voiced_frames.speaker_id,
                 self.lock
         )
-        future.add_done_callback(self.onTranscribed)
-        self.futures.append(future)
+        future.add_done_callback(functools.partial(self.onTranscribed,futures=futures))
+        futures.append(future)
 
-    def onTranscribed(self,future):
+    def onTranscribed(self,future,futures=None):
         if future.exception() is not None:
             print(future.exception())
-        if self.lock.locked():
-            self.lock.release()
-        self.futures.remove(future)
+            if self.lock.locked():
+                print("lock release(abnormal)")
+                self.lock.release()
+
+        futures.remove(future)
 
     def transcribe(self,model=None,prompt="",speaker_id="",lock=None):
         threading.current_thread().name = "transcribe_waiting"
@@ -149,6 +155,8 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         if len(target_voiced_frames) == 0:
             lock.release()
             return
+        
+        transcription_start_time = time.time()
         
         initial_prompt = prompt + '。'+''.join(self.transcribed_history.get(speaker_id,[]))
         audio = b''.join([f.getAudio() for f in target_voiced_frames])
@@ -168,6 +176,10 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
                                             beam_size=3,language="ja",vad_filter=False,temperature=[0.0,0.2,0.4],best_of=2,
                                             word_timestamps=False)
         segments = list(segments) # generatorをlistに変換することでcoroutineを実行する
+        now = time.time()
+        print(f"transcribe done {len(audio)} samples. spent:" +
+              f"{int((now - transcription_start_time)*1000)}msec latency:" +
+              f"{int((now - target_voiced_frames[0].creation_time)*1000)}msec")
         if len(segments) > 0:
             # voiced_framesにtextを設定する
             whole_text = ''.join([s.text for s in segments])
@@ -210,6 +222,6 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
                 },
                 opusData=opus
             )
-        
+        print("lock release(normal)")
         lock.release()
         threading.current_thread().name = "transcribe_done"

@@ -3,6 +3,7 @@ import collections
 import sys
 import uuid
 from pyee import AsyncIOEventEmitter
+import time
 
 class Frame(object):
     """Represents a "frame" of audio data."""
@@ -19,6 +20,8 @@ class VoicedFrames(object):
         self.sample_rate=sample_rate
         self.speaker_id=speaker_id
         self.transcribed=False
+        self.transcribe_start_time=0.0
+        self.creation_time=time.time()
 
     def getBegin(self):
         return self.frames[0].timestamp
@@ -45,7 +48,9 @@ class VAD():
         self.left_audio=b''
         self.event_emitter=event_emitter
         self.now_voiced=False
+
         self.prompt=""
+        self.futures=[]
         #self.voiced_frames=VoicedFrames(sample_rate)
     
     def addFrame(self,audio,timestamp=None,final=False):
@@ -65,7 +70,7 @@ class VAD():
         self.detect()
         if final and len(self.frames) > 0:
             # 最後なので、全部emitする
-            self.event_emitter.emit("detect",voiced_frames=VoicedFrames(self.frames,self.sample_rate,speaker_id=self.speaker_id),prompt=self.prompt)
+            self.event_emitter.emit("detect",voiced_frames=VoicedFrames(self.frames,self.sample_rate,speaker_id=self.speaker_id),prompt=self.prompt,futures=self.futures)
             self.frames=[]
 
     def countFrames(self):
@@ -143,7 +148,7 @@ class VAD():
                 if num_unvoiced > 0.9 * ring_buffer.maxlen:
                     #sys.stdout.write('-(%0.2f)' % (frame.timestamp + frame.duration))
                     triggered = False
-                    self.event_emitter.emit("detect",voiced_frames=VoicedFrames(voiced_frames,self.sample_rate,speaker_id=self.speaker_id),prompt=self.prompt)
+                    self.event_emitter.emit("detect",voiced_frames=VoicedFrames(voiced_frames,self.sample_rate,speaker_id=self.speaker_id),prompt=self.prompt,futures=self.futures)
                     # emit後のframeは削除する
                     self.frames = self.frames[len(voiced_frames):]
                     ring_buffer.clear()
