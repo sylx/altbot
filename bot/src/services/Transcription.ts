@@ -194,8 +194,6 @@ export class Transcription {
         }
         const write_stream = new TranscriptionWriteStream(this.api_stream as any,user.id,prompt)
 
-        const logger = await resolveDependency(Logger)
-        logger.log(`speaking start ${member.displayName}(${user.username})`,"info")
         const receiver = connection.receiver;
         const opusStream=receiver.subscribe(user.id, {
             end: {

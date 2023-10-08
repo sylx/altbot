@@ -149,15 +149,23 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
                                             condition_on_previous_text=False,
                                             prefix="",initial_prompt=initial_prompt,
                                             compression_ratio_threshold=1.5,
-                                            beam_size=3,language="ja",vad_filter=False,temperature=[0.0,0.2],best_of=2,
-                                            word_timestamps=True)
+                                            beam_size=3,language="ja",vad_filter=False,temperature=[0.0,0.2,0.4],best_of=2,
+                                            word_timestamps=False)
         segments = list(segments) # generatorをlistに変換することでcoroutineを実行する
         if len(segments) > 0:
             # voiced_framesにtextを設定する
             whole_text = ''.join([s.text for s in segments])
+            temperature = sum([s.temperature for s in segments]) / len(segments)
+            compression_ratio = sum([s.compression_ratio for s in segments]) / len(segments)            
             # dump
             for vf in target_voiced_frames:
                 vf.transcribed = True
+
+            if compression_ratio > 1.5:
+                # compression_retio_threshold設定してるのに、なぜか超えてしまう場合がある
+                lock.release()
+                return
+
             # current_audioをoggopus形式で保存しておく
             opus = b''
             with io.BytesIO() as f:
@@ -172,7 +180,9 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
                         "end": target_voiced_frames[-1].getEnd(),
                         "packet_timestamp": target_voiced_frames[0].getBegin(),
                         "text": whole_text,
-                        "speaker_id": speaker_id
+                        "speaker_id": speaker_id,
+                        "temperature": temperature,
+                        "compression_ratio": compression_ratio,
                 },
                 opusData=opus
             )

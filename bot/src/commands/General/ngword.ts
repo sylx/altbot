@@ -1,20 +1,15 @@
 import { Category } from "@discordx/utilities"
-import { APIEmbedField, ActionRowBuilder, ApplicationCommandOptionType, ButtonBuilder, ButtonStyle, CommandInteraction, ComponentType, EmbedBuilder, EmbedField,
-	FetchMessageOptions,
-	StringSelectMenuBuilder, StringSelectMenuOptionBuilder } from "discord.js"
+import { APIEmbedField, ApplicationCommandOptionType, CommandInteraction, EmbedBuilder, EmbedField } from "discord.js"
 import { Client, SlashGroup } from "discordx"
 import { injectable } from "tsyringe"
 
-import { generalConfig } from "@config"
-import { Discord, Slash,SlashOption } from "@decorators"
+import { Discord, Slash, SlashOption } from "@decorators"
 import { Guard } from "@guards"
-import { Database, Stats } from "@services"
+import { Database } from "@services"
 import { getColor, resolveDependency, simpleErrorEmbed, simpleSuccessEmbed } from "@utils/functions"
 import { NgWord, NgWordHistory } from "@entities"
 
-import { table as TextTable,getBorderCharacters } from 'table';
-import { ResponseFiltersContainer } from "@tsed/common"
-import { I } from "ts-toolbelt"
+import { table as TextTable, getBorderCharacters } from 'table'
 
 
 @Discord()
@@ -25,7 +20,6 @@ import { I } from "ts-toolbelt"
 export default class NgWordCommand {
 
 	constructor(
-		private stats: Stats
 	) {}
 
 	@Slash({
@@ -174,7 +168,8 @@ export default class NgWordCommand {
 		const db = await resolveDependency(Database)
 		const ngword_history_db = db.get(NgWordHistory)
 		const stats=await ngword_history_db.getStatistics()
-		const embed_promise=stats.sort((a,b)=>b.total_score-a.total_score).map( async (stat,index)=>{
+		let index=0
+		const embed_promise=stats.sort((a,b)=>b.total_score-a.total_score).map( async (stat,i)=>{
 			const member=interaction.guild?.members.cache.get(stat.member_id)
 			let embed : EmbedBuilder | null = null
 			if(member){
@@ -204,6 +199,7 @@ export default class NgWordCommand {
 						text: `最近の発言: ${hit_words.map(h=>h.hit_word).join("、")}`
 					})
 				}
+				index++
 			}
 			return embed
 		})

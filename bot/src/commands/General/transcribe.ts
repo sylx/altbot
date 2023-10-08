@@ -83,6 +83,9 @@ export default class TranscribeCommand {
 		}
 
 		transcription.on("vad",async (data: any)=>{
+			console.log("received vad",{
+				id: data.id
+			})
 			if(data.speaker_id === listenTo?.id){
 				let aiz = aizuchi[Math.floor(Math.random()*aizuchi.length)]
 				tts.speak(aiz,{useCache: true})
@@ -93,13 +96,19 @@ export default class TranscribeCommand {
 			console.log("received",{
 				ids: data.ids,
 				speaker_id:data.speaker_id,
-				text: data.text
+				text: data.text,
+				temperature: data.temperature,
+				compression_ratio: data.compression_ratio
 			})
-			if(data.text.match(/ご視聴ありがとうございました/)) return
+			if(data.text.match(/(?:視聴ありがとうございました|編曲)/)) return
 			const member = voiceChat.getChannel()?.guild.members.cache.get(data.speaker_id) as GuildMember
 			const member_me = voiceChat.getChannel()?.guild.members.cache.get(client.user?.id as Snowflake) as GuildMember
 
 			if(data.speaker_id === listenTo?.id){
+				if(listenToTimeout){
+					clearTimeout(listenToTimeout)
+				}
+
 				let aiz = null
 				if(data.text.match(/(?:よね|？|だろ)/)){
 					aiz = doui[Math.floor(Math.random()*doui.length)]
@@ -164,9 +173,6 @@ export default class TranscribeCommand {
 							content: "聞き取り中..."
 						})
 					}
-				}
-				if(listenToTimeout){
-					clearTimeout(listenToTimeout)
 				}
 				listenToTimeout=setTimeout(reply,5000)
 				return
