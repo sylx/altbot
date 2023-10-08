@@ -2,6 +2,7 @@ import webrtcvad
 import collections
 import sys
 import uuid
+from pyee import AsyncIOEventEmitter
 
 class Frame(object):
     """Represents a "frame" of audio data."""
@@ -33,7 +34,7 @@ class VoicedFrames(object):
         
 class VAD():
 
-    def __init__(self,sample_rate,frame_duration_ms=20, padding_duration_ms=200, aggressiveness=2,event_emitter=None,speaker_id=""):
+    def __init__(self,sample_rate,frame_duration_ms=20, padding_duration_ms=200, aggressiveness=2,event_emitter : AsyncIOEventEmitter=None,speaker_id=""):
         self.sample_rate=sample_rate
         self.speaker_id=speaker_id
         self.vad=webrtcvad.Vad(aggressiveness)
@@ -44,6 +45,7 @@ class VAD():
         self.left_audio=b''
         self.event_emitter=event_emitter
         self.now_voiced=False
+        self.prompt=""
         #self.voiced_frames=VoicedFrames(sample_rate)
     
     def addFrame(self,audio,timestamp=None,final=False):
@@ -63,7 +65,7 @@ class VAD():
         self.detect()
         if final and len(self.frames) > 0:
             # 最後なので、全部emitする
-            self.event_emitter.emit("detect",VoicedFrames(self.frames,self.sample_rate,speaker_id=self.speaker_id))
+            self.event_emitter.emit("detect",voiced_frames=VoicedFrames(self.frames,self.sample_rate,speaker_id=self.speaker_id),prompt=self.prompt)
             self.frames=[]
 
     def countFrames(self):
@@ -75,7 +77,7 @@ class VAD():
     def terminate(self):
         self.frames=[]
         self.left_audio=b''
-    
+        
     def detect(self):
         """Filters out non-voiced audio frames.
 
@@ -141,7 +143,7 @@ class VAD():
                 if num_unvoiced > 0.9 * ring_buffer.maxlen:
                     #sys.stdout.write('-(%0.2f)' % (frame.timestamp + frame.duration))
                     triggered = False
-                    self.event_emitter.emit("detect",VoicedFrames(voiced_frames,self.sample_rate,speaker_id=self.speaker_id))
+                    self.event_emitter.emit("detect",voiced_frames=VoicedFrames(voiced_frames,self.sample_rate,speaker_id=self.speaker_id),prompt=self.prompt)
                     # emit後のframeは削除する
                     self.frames = self.frames[len(voiced_frames):]
                     ring_buffer.clear()

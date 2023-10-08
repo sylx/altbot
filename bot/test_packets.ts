@@ -156,9 +156,9 @@ async function streamTest(speaker_id: string,packets: Array<any>,delay: number){
 
 
 Promise.all([
-    streamTest("test-0",generatePackets("dump-jigoku3dayu-1696511950609.bin"),0),
-    streamTest("test-1",generatePackets("dump-jigoku3dayu-1696511968012.bin"),3000),
-    //streamTest("test-2",generatePackets("dump-jigoku3dayu-1696551798341.bin"),0),
+    //streamTest("test-0",generatePackets("dump-jigoku3dayu-1696511950609.bin"),0),
+    //streamTest("test-1",generatePackets("dump-jigoku3dayu-1696511968012.bin"),0),
+    streamTest("test-2",generatePackets("dump-jigoku3dayu-1696551798341.bin"),0),
 ]).then(()=>{
     console.log("end")
     process.exit(0)

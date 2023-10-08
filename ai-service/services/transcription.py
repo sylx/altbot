@@ -15,6 +15,7 @@ from libs.vad import VAD
 from memory_profiler import profile
 import json
 import threading
+import functools
 
 class Transcription(transcription_pb2_grpc.TranscriptionServicer):
    
@@ -23,13 +24,14 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         self.model=WhisperModel(
             "medium",
             device="cuda",
-            compute_type="float16",
+            compute_type="float32",
             download_root="./.model_cache",
         )
         self.pool = pool
         self.decoder = Decoder()
         self.vad = {}
         self.voiced_frames = {}
+        self.transcribed_history = {}
         self.min_speech_sec = 1.5
         self.index = 0
         self.ee = AsyncIOEventEmitter(asyncio.get_running_loop())
@@ -70,7 +72,9 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
             if self.vad.get(speaker_id) is None:
                 self.createVAD(speaker_id)
             vad = self.vad[speaker_id]
-            self.ee.on("detect",self.onDetect)
+            vad.prompt=prompt
+            #handler = functools.partial(self.onDetect,prompt=prompt)
+            self.ee.add_listener("detect",self.onDetect)
 
             if len(packets) > 0:
                 for i,packet in enumerate(packets):
@@ -83,6 +87,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
                 self.event_buffer.clear()
 
             if request.is_final:
+                self.ee.remove_listener("detect",self.onDetect)
                 break
 
         # futuresを待つ
@@ -97,7 +102,10 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         self.voiced_frames[speaker_id] = None
         print("terminated") 
 
-    def onDetect(self,voiced_frames):
+    def onDetect(self,voiced_frames=None,prompt=""):
+        if voiced_frames is None:
+            return
+        
         self.emit("vad",{
             "id": voiced_frames.id,
             "speaker_id": voiced_frames.speaker_id,
@@ -111,15 +119,23 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
             self.voiced_frames[voiced_frames.speaker_id].append(voiced_frames)
 
         # 音声解析にまわす
-        self.futures.append(
-            asyncio.get_running_loop().run_in_executor(
+        future=asyncio.get_running_loop().run_in_executor(
                 self.pool,
                 self.transcribe,
                 self.model,
-                "", # prompt
+                prompt, # prompt
                 voiced_frames.speaker_id,
                 self.lock
-        ))
+        )
+        future.add_done_callback(self.onTranscribed)
+        self.futures.append(future)
+
+    def onTranscribed(self,future):
+        if future.exception() is not None:
+            print(future.exception())
+        if self.lock.locked():
+            self.lock.release()
+        self.futures.remove(future)
 
     def transcribe(self,model=None,prompt="",speaker_id="",lock=None):
         threading.current_thread().name = "transcribe_waiting"
@@ -134,7 +150,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
             lock.release()
             return
         
-        initial_prompt = prompt
+        initial_prompt = prompt + '。'+''.join(self.transcribed_history.get(speaker_id,[]))
         audio = b''.join([f.getAudio() for f in target_voiced_frames])
 
         # soundfileとlibrosaを使ってpcmを16000Hzのndarrayに変換する
@@ -144,7 +160,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         # 16000Hzのfloat32の無音(0)のndarrayを作成してaudioの前後に挿入する
         audio = np.concatenate([np.zeros(16000,dtype=np.float32),audio,np.zeros(16000,dtype=np.float32)])
         
-        print(f"transcribe start {len(audio)} samples. prompt={prompt}")
+        print(f"transcribe start {len(audio)} samples. prompt={initial_prompt}")
         segments,info = model.transcribe(audio,
                                             condition_on_previous_text=False,
                                             prefix="",initial_prompt=initial_prompt,
@@ -155,7 +171,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         if len(segments) > 0:
             # voiced_framesにtextを設定する
             whole_text = ''.join([s.text for s in segments])
-            temperature = sum([s.temperature for s in segments]) / len(segments)
+            temperature = [s.temperature for s in segments]
             compression_ratio = sum([s.compression_ratio for s in segments]) / len(segments)            
             # dump
             for vf in target_voiced_frames:
@@ -163,8 +179,16 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
 
             if compression_ratio > 1.5:
                 # compression_retio_threshold設定してるのに、なぜか超えてしまう場合がある
+                print(f"ignore result since compression_ratio={compression_ratio} {temperature} {whole_text}")
                 lock.release()
                 return
+
+            # 結果を保存する
+            if self.transcribed_history.get(speaker_id) is None:
+                self.transcribed_history[speaker_id] = []
+            self.transcribed_history[speaker_id].append(whole_text)
+            if len(self.transcribed_history[speaker_id]) > 3:
+                self.transcribed_history[speaker_id]=self.transcribed_history[speaker_id][-3:]
 
             # current_audioをoggopus形式で保存しておく
             opus = b''
