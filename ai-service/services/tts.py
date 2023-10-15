@@ -22,6 +22,9 @@ import psola
 import random
 from libs.tune import autotune
 
+from libs.vits_japros.model import VITSJaProsModel
+from libs.vits_japros.text import g2p
+
 def butter_lowpass(cutoff, fs, order=5):
     nyquist = 0.5 * fs
     normal_cutoff = cutoff / nyquist
@@ -45,11 +48,10 @@ def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
     y = lfilter(b, a, data)
     return y
 
-class Tts(tts_pb2_grpc.TtsServicer):
-   
-    def __init__(self,pool) -> None:        
+
+class TtsMoeGoeBackend():
+    def __init__(self) -> None:        
         super().__init__()
-        self.pool = pool
         model = f'{Path(__file__).parent.parent}/vits_models/ruise/1158_epochs.pth'
         config = f'{Path(__file__).parent.parent}/vits_models/ruise/config.json'
         self.hps_ms = utils.get_hparams_from_file(config)
@@ -68,6 +70,56 @@ class Tts(tts_pb2_grpc.TtsServicer):
         _ = self.net_g_ms.eval()
         self.speaker_id = 24
         utils.load_checkpoint(model, self.net_g_ms)
+    
+    def generateSpeech(self,text):
+        length_scale, text = get_label_value(text, 'LENGTH', 1, 'length scale')
+        noise_scale, text = get_label_value(text, 'NOISE', 0.667, 'noise scale')
+        noise_scale_w, text = get_label_value(text, 'NOISEW', 0.8, 'deviation of noise')
+        cleaned, text = get_label(text, 'CLEANED')
+        stn_tst = get_text(text, self.hps_ms, cleaned=cleaned)
+        with no_grad():
+            x_tst = stn_tst.unsqueeze(0).to(dev)
+            x_tst_lengths = LongTensor([stn_tst.size(0)]).to(dev)
+            sid = LongTensor([self.speaker_id]).to(dev)
+            # black magic
+            audio = self.net_g_ms.infer(x_tst, x_tst_lengths, sid=sid, noise_scale=noise_scale,
+                                noise_scale_w=noise_scale_w, length_scale=length_scale)[0][0, 0].data.cpu().float().numpy()
+            # convert sample rate to 24000 using scipy
+            audio = audio.astype(np.float32)
+            audio = librosa.resample(audio, orig_sr=22050, target_sr=24000)
+            return audio
+
+class TtsVitsJaProsBackend():
+    def __init__(self) -> None:
+        super().__init__()
+        model_name= "espnet"
+        base_dir = f'{Path(__file__).parent.parent}'
+        model_path = f"{base_dir}/vits_models/{model_name}/192epoch.pth"
+        yaml_file = f"{base_dir}/vits_models/{model_name}/config.yaml"
+        device="gpu"
+        self.model = VITSJaProsModel(model_name, model_path, yaml_file, device=device)
+
+    def generateSpeech(self,text):
+        speed_scale = 1.0
+        pitch_scale = 1.0
+        intonation_scale = 1.0
+        noise_scale = 0.0
+        noise_scale_dur = 0.0
+        p = g2p(text)
+        sample_rate,audio=self.model.p2speech(
+                p, speed_scale, pitch_scale, intonation_scale, noise_scale, noise_scale_dur
+        )
+        audio = audio.astype(np.float32)
+        audio = librosa.resample(audio, orig_sr=sample_rate, target_sr=24000)
+        return audio
+
+class Tts(tts_pb2_grpc.TtsServicer):
+   
+    def __init__(self,pool) -> None:        
+        super().__init__()
+        self.pool = pool
+        #self.backend = TtsMoeGoeBackend()
+        self.backend = TtsVitsJaProsBackend()
         # reverb
         self.schroeder_reverb = SchroederReverb(
             24000,
@@ -105,7 +157,6 @@ class Tts(tts_pb2_grpc.TtsServicer):
             if len(text + sentence) < minLength:
                 text += sentence
                 continue
-            # 音声データを生成する
             ret.append(text + sentence)
             text = ""
         # 最後の要素を処理する
@@ -116,52 +167,37 @@ class Tts(tts_pb2_grpc.TtsServicer):
 
     def generateSpeech(self,text,lock):
         threading.current_thread().name = "generateSpeech"
-        print(f"generateSpeech {text}")
-        length_scale, text = get_label_value(text, 'LENGTH', 1, 'length scale')
-        noise_scale, text = get_label_value(text, 'NOISE', 0.667, 'noise scale')
-        noise_scale_w, text = get_label_value(text, 'NOISEW', 0.8, 'deviation of noise')
-        cleaned, text = get_label(text, 'CLEANED')
-        stn_tst = get_text(text, self.hps_ms, cleaned=cleaned)
-        with no_grad():
-            # 再入禁止
-            if lock.acquire(blocking=True,timeout=10) == False:
-                raise Exception("lock timeout in generateSpeech")
-            
-            x_tst = stn_tst.unsqueeze(0).to(dev)
-            x_tst_lengths = LongTensor([stn_tst.size(0)]).to(dev)
-            sid = LongTensor([self.speaker_id]).to(dev)
-            # black magic
-            audio = self.net_g_ms.infer(x_tst, x_tst_lengths, sid=sid, noise_scale=noise_scale,
-                                noise_scale_w=noise_scale_w, length_scale=length_scale)[0][0, 0].data.cpu().float().numpy()
-            # convert sample rate to 24000 using scipy
-            audio = audio.astype(np.float32)
-            audio = librosa.resample(audio, orig_sr=22050, target_sr=24000)
+        if lock.acquire(blocking=True,timeout=10) == False:
+            raise Exception("lock timeout in generateSpeech")
+        
+        audio=self.backend.generateSpeech(text)
+        
 
-            # ピッチをGladosぽくする
-            # filtered_audio=butter_bandpass_filter(audio, 500, 4250, 24000)            
-            # audio = autotune(audio, 24000,"C:min",0) + autotune(filtered_audio, 24000,"C:min",random.randint(-3, 3))
+        # ピッチをGladosぽくする
+        # filtered_audio=butter_bandpass_filter(audio, 500, 4250, 24000)            
+        # audio = autotune(audio, 24000,"C:min",0) + autotune(filtered_audio, 24000,"C:min",random.randint(-3, 3))
 
-            # base_pitch=librosa.midi_to_hz(50 + random.randint(-1, 1)*3)
-            # pitchs = np.array([base_pitch] * (int(len(audio)/512)+1),dtype=np.float32)
-            # audio = psola.vocode(audio, sample_rate=24000, target_pitch=pitchs, fmin=20.0, fmax=5000.0)
-            # audio = audio2 + audio3
+        # base_pitch=librosa.midi_to_hz(50 + random.randint(-1, 1)*3)
+        # pitchs = np.array([base_pitch] * (int(len(audio)/512)+1),dtype=np.float32)
+        # audio = psola.vocode(audio, sample_rate=24000, target_pitch=pitchs, fmin=20.0, fmax=5000.0)
+        # audio = audio2 + audio3
 
-            # 1秒ほど伸ばす
-            audio = np.concatenate([audio,np.zeros(int(24000/2),dtype=np.float32)])
+        # 1秒ほど伸ばす
+        audio = np.concatenate([audio,np.zeros(int(24000/2),dtype=np.float32)])
 
-            # PCMデータにリバーブをかける
-            audio = self.schroeder_reverb.filt(audio)
+        # PCMデータにリバーブをかける
+        audio = self.schroeder_reverb.filt(audio)
 
-            # apply high cut filter
-            audio = butter_lowpass_filter(audio, 5500,24000)
+        # apply high cut filter
+        audio = butter_lowpass_filter(audio, 5500,24000)
 
 
-            f = io.BytesIO() # create a memory file
-            sf.write(f, audio, 24000, format='OGG', subtype='OPUS') # write audio data to memory file
-            # return ogg opus audio data
-            print(f"encoded {len(audio)} bytes for {text}")
-            lock.release()
-            return f.getvalue()
+        f = io.BytesIO() # create a memory file
+        sf.write(f, audio, 24000, format='OGG', subtype='OPUS') # write audio data to memory file
+        # return ogg opus audio data
+        print(f"encoded {len(audio)} bytes for {text}")
+        lock.release()
+        return f.getvalue()
 
 
     def GetSpeakers(self, request, context):
