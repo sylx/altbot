@@ -90,12 +90,14 @@ export class Tts {
         if(!this.voiceChat.isEnable()){
             throw new Error("not connected voice channel")
         }
+        let imediate=option?.imediate 
         if(option?.useCache){
             const buffer=this.cache.get(text)
             if(buffer && option?.silent !== true){
                 console.log("from cache",text)
                 const stream = Readable.from(buffer)
-                if(option?.imediate === true){
+                if(imediate === true){
+                    imediate=false
                     this.getPlayer().stop()
                     this.playQueue=[]
                     this.isPlaying=false
@@ -107,7 +109,7 @@ export class Tts {
         const req = new TtsSpeakRequest()
         req.setText(text)
         const stream=this.client.speakStream(req)
-        let is_first=true
+
         return new Promise((resolve, reject) => {
             stream.on("data", async (response : TtsSpeakResponse) => {
                 const audio = response.getAudio()
@@ -122,8 +124,8 @@ export class Tts {
                     }
                     console.log("queue",this.playQueue.length,response.getText())
                     if(option?.silent !== true){
-                        if(option?.imediate === true && is_first){
-                            is_first=false
+                        if(imediate === true){
+                            imediate=false
                             this.getPlayer().stop()
                             this.playQueue=[]
                         }
