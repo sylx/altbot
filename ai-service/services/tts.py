@@ -118,8 +118,8 @@ class Tts(tts_pb2_grpc.TtsServicer):
     def __init__(self,pool) -> None:        
         super().__init__()
         self.pool = pool
-        #self.backend = TtsMoeGoeBackend()
-        self.backend = TtsVitsJaProsBackend()
+        self.backend = TtsMoeGoeBackend()
+        #self.backend = TtsVitsJaProsBackend()
         # reverb
         self.schroeder_reverb = SchroederReverb(
             24000,
