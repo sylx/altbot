@@ -5,7 +5,6 @@ import { Category } from "@discordx/utilities"
 import { CommandInteraction, Client, GuildMember, ChannelType, Collection, ApplicationCommandOptionType,  VoiceChannel } from "discord.js"
 import { resolveDependency, simpleErrorEmbed, simpleSuccessEmbed } from "@utils/functions"
 import { Tts, VoiceChat } from "@services"
-import { mem } from "node-os-utils"
 @Discord()
 @injectable()
 @Category('General')

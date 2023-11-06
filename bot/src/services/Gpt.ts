@@ -16,6 +16,13 @@ const makeRealtimeReactionShotData2 = {
   hostile_score: 0, 
   reply_text: "やったー！俺のこと好きなやつがいるの嬉しいね！今後も仲良くしてください{username}さん！"
 }
+const makeOgiriShotData = {
+  subject: "こんなガンダムは嫌だ",
+  correct_review: "素晴らしい解答だね！{username}、僕のお題に完璧に答えているよ。さすが若手のホープ！君みたいな若者がいれば、指導部も安心できると思うよ！",
+  warning_review: "ちょっと…{username}、それはないんじゃないの？誰も笑ってないし、自分でも失敗したのはわかってるだろうけど、当局が君の解答を見てどう思うか、考えてみて？",
+  guilty_review: "{username}には失望したよ。口を閉じて、どのような立場であっても、二度と発言しないで欲しい。再教育センターでの学習を通告します"
+}
+
 
 @singleton()
 export class Gpt {
@@ -137,4 +144,51 @@ export class Gpt {
       }
       return null
     }
+    async makeOgiri(word: string): Promise<typeof makeOgiriShotData | null>{
+      const system_content = `
+      設定1: あなたの名前は「アルトボット」で、チャットルームを管理するAIアシスタントである。
+      設定2: あなたにはチャットルームでの議論を健全なものに保つ義務があり、またその為の権限は全て所有している。
+      設定3: あなたは敬語は使わず、ため口で、日本在住の中国人の口調で、ユーザーの名前が入る場所には{username}と、話す必要がある。
+      設定4: あなたは以下の動作を行う:
+      1 - ユーザーから与えられた三重のバックティックで区切られた日本語の単語を元に、大喜利のお題を一つ出力する
+      2 - お題についての解答した時が公共のチャットルームでの発言として適切であったという意味で、発言者を賛美、称揚するレビュー文を、当局、指導部などのバックにいる権力者を匂わしながら200字以内で出力する
+      3 - お題についての解答した時が公共のチャットルームでの発言としてはふさわしくなかったという意味で、発言者を非難、警告するレビュー文を、当局、指導部などのバックにいる権力者を匂わしながら200字以内で出力する
+      3 - お題についての解答が公共のチャットルームでの発言としては特に悪質だったという意味で、出禁、当局への通報、再教育センターへの収監など、厳罰が確定した事を当該ユーザーに告げるレビュー文を、時には再教育センター、収容所、身元の特定、監視の強化、などの厳罰の内容を匂わしながら200字以内で出力する
+      4 - 以下のキーを含むjsonオブジェクトを出力する:  subject,correct_review,warning_review,guilty_review`.replace(/^\s+/gm,"")
+
+      const response=await this.openai?.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            "role": "system",
+            "content": system_content
+          },
+          {
+            "role": "user",
+            "content": "```ガンダム```"
+          },
+          {
+            "role": "assistant",
+            "content": JSON.stringify(makeOgiriShotData,null,2)
+          },
+          {
+            "role": "user",
+            "content": "```"+word+"```"
+          }
+        ],
+        temperature: 1,
+        max_tokens: 2000,
+        top_p: 1,
+        frequency_penalty: 1.0,
+        presence_penalty: 0,
+      })
+      try{
+        return this.parseJson(response) as typeof makeOgiriShotData
+      }catch(e: any){
+        console.log("response error",response)
+        console.error(e)
+      }
+      return null
+    }
+
 }
