@@ -96,12 +96,12 @@ export class Tts {
             if(buffer && option?.silent !== true){
                 console.log("from cache",text)
                 const stream = Readable.from(buffer)
-                if(imediate === true){
-                    imediate=false
-                    this.getPlayer().stop()
-                    this.playQueue=[]
-                    this.isPlaying=false
-                }
+                // if(imediate === true){
+                //     imediate=false
+                //     this.getPlayer().stop()
+                //     this.playQueue=[]
+                //     this.isPlaying=false
+                // }
                 this.playQueue.push(stream)
                 return this.playNextInQueue();
             }
@@ -124,13 +124,13 @@ export class Tts {
                     }
                     console.log("queue",this.playQueue.length,response.getText())
                     if(option?.silent !== true){
-                        if(imediate === true){
-                            imediate=false
-                            this.getPlayer().stop()
-                            this.playQueue=[]
-                        }
+                        // if(imediate === true){
+                        //     imediate=false
+                        //     this.getPlayer().stop()
+                        //     this.playQueue=[]
+                        // }
                         this.playQueue.push(oggStream)
-                        this.playNextInQueue()
+                        await this.playNextInQueue()
                     }
                 }
             }).on("end", async () => {

@@ -15,7 +15,7 @@ import { Database } from "./Database"
 
 
 //まとめて送りつけるパケット数(1パケットの長さはだいたい20ms)
-const SEND_PACKET_NUM = 10
+const SEND_PACKET_NUM = 20
 
 export class TranscriptionWriteStream extends Writable{
     protected packetList : DiscordOpusPacketList | null = null
@@ -54,7 +54,7 @@ export class TranscriptionWriteStream extends Writable{
         this.packetList.setSpeakerId(this.speaker_id)
         this.packetList.setPrompt(this.prompt)
         //console.log("flush",is_final ? "final" : "",this.packetList.getPacketsList().length,"packets")
-        process.stdout.write(is_final ? "!" : ".")
+        //process.stdout.write(is_final ? "!" : ".")
         
 
         if(this.api_bi_stream){

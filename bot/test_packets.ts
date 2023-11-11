@@ -39,9 +39,11 @@ function generatePackets(filename: string,repeat?: number): Array<any>{
 }
 
 // waitを入れながら送信する
-async function send(packets: Array<any>,writeStream : TranscriptionWriteStream){
+async function send(packets: Array<any>,writeStream : TranscriptionWriteStream,speaker_id: string){
+    // speaker_idの最後の文字を取得
+    const c=speaker_id.slice(-1)
     for(let p of packets){
-        process.stdout.write(".")
+        process.stdout.write(c)
         writeStream.write(p)
         //const samplesDecoded = encoder.decode(p);      
         //speaker.write(samplesDecoded)
@@ -52,7 +54,7 @@ async function send(packets: Array<any>,writeStream : TranscriptionWriteStream){
 }
 
 const prompt = "アルト、サムゲタン"
-
+const results : {[key: string]: string} = {}
 async function streamTest(speaker_id: string,packets: Array<any>,delay: number){
     const api_stream = client.transcriptionBiStreams()
     const writeStream = new TranscriptionWriteStream(api_stream,speaker_id,prompt)
@@ -86,6 +88,7 @@ async function streamTest(speaker_id: string,packets: Array<any>,delay: number){
                         packet_timestamp: toDate(data.packet_timestamp),
                         text: data.text
                     })
+                    results[data.speaker_id] = (results[data.speaker_id] ?? []).concat(data.text)
                     data.ids.forEach((id : string)=>{
                         transcribedAudio[id]= {
                             id: id,
@@ -112,8 +115,10 @@ async function streamTest(speaker_id: string,packets: Array<any>,delay: number){
                     break
             }
         }).on("end",async ()=>{
-            console.log("api read end")
+            console.log("api read end",speaker_id)
+            resolve()
             //transcribedAudioを順に再生する
+            return
             const funcs : Array<any>=Object.values(transcribedAudio).sort((a,b)=>a.packet_timestamp-b.packet_timestamp).map((data)=>{
                 return ()=>{
                     return new Promise((resolve,reject)=>{
@@ -150,16 +155,17 @@ async function streamTest(speaker_id: string,packets: Array<any>,delay: number){
     await new Promise(resolve => setTimeout(resolve, delay));
     await Promise.all([
         api_promise,
-        send(packets,writeStream)
+        send(packets,writeStream,speaker_id)
     ])
 }
 
 
 Promise.all([
-    //streamTest("test-0",generatePackets("dump-jigoku3dayu-1696511950609.bin"),0),
-    //streamTest("test-1",generatePackets("dump-jigoku3dayu-1696511968012.bin"),0),
+    streamTest("test-0",generatePackets("dump-jigoku3dayu-1696511950609.bin"),1000),
+    streamTest("test-1",generatePackets("dump-jigoku3dayu-1696511968012.bin"),2000),
     streamTest("test-2",generatePackets("dump-jigoku3dayu-1696551798341.bin"),0),
 ]).then(()=>{
+    console.log("results",results)
     console.log("end")
     process.exit(0)
 })

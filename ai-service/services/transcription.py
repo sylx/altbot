@@ -99,9 +99,11 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
                 for event in self.event_buffer:
                     yield event
                 self.event_buffer.clear()
-            
-        self.voiced_frames[speaker_id] = None
-        print("terminated") 
+        if self.voiced_frames.get(speaker_id) is not None:
+            del self.voiced_frames[speaker_id]
+        if self.transcribed_history.get(speaker_id) is not None:
+            del self.transcribed_history[speaker_id]
+        print(f"terminated {speaker_id}") 
 
 
     def onDetect(self,voiced_frames=None,prompt="",futures=None):
@@ -162,7 +164,11 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         transcription_start_time = time.time()
         
         initial_prompt = prompt + '。'+''.join(self.transcribed_history.get(speaker_id,[]))
+        # initial_prompt = prompt
+        prefix=''        
+        #prefix=''.join(self.transcribed_history.get(speaker_id,[]))
         audio = b''.join([f.getAudio() for f in target_voiced_frames])
+        #audio = audio + b''.join([f.getAudio() for f in prefix_voiced_frames])
 
         # soundfileとlibrosaを使ってpcmを16000Hzのndarrayに変換する
         soundfile=sf.SoundFile(io.BytesIO(audio),mode='r',format='RAW',subtype='PCM_16',channels=1,samplerate=48000)
@@ -174,7 +180,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         print(f"transcribe start {len(audio)} samples. prompt={initial_prompt}")
         segments,info = model.transcribe(audio,
                                             condition_on_previous_text=False,
-                                            prefix="",initial_prompt=initial_prompt,
+                                            prefix=prefix,initial_prompt=initial_prompt,
                                             compression_ratio_threshold=1.5,
                                             beam_size=3,language="ja",vad_filter=False,temperature=[0.0,0.2,0.4],best_of=2,
                                             word_timestamps=False)
@@ -188,11 +194,12 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
             whole_text = ''.join([s.text for s in segments])
             temperature = [s.temperature for s in segments]
             compression_ratio = sum([s.compression_ratio for s in segments]) / len(segments)            
+            print(f"transcribed result: {whole_text} {temperature} {compression_ratio}")
             # dump
             for vf in target_voiced_frames:
                 vf.transcribed = True
 
-            if compression_ratio > 1.5:
+            if compression_ratio > 3.0:
                 # compression_retio_threshold設定してるのに、なぜか超えてしまう場合がある
                 print(f"ignore result since compression_ratio={compression_ratio} {temperature} {whole_text}")
                 lock.release()

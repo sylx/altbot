@@ -5,7 +5,9 @@ import { Category } from "@discordx/utilities"
 import { CommandInteraction, Client, GuildMember, ChannelType, Collection, ApplicationCommandOptionType,  VoiceChannel } from "discord.js"
 import { resolveDependency, simpleErrorEmbed, simpleSuccessEmbed } from "@utils/functions"
 import { Gpt, Tts, VoiceChat } from "@services"
-import { set } from "@tsed/schema"
+
+let excuting=false
+
 @Discord()
 @injectable()
 @Category('General')
@@ -25,6 +27,15 @@ export default class OgiriCommand {
 		client: Client,
 		{ localize }: InteractionData
 	) {
+        if(excuting){
+            simpleErrorEmbed(
+                interaction,
+                `現在他のお題を実行中です`
+            )
+            return
+        }
+        excuting=true
+
         // 呼び出したメンバーの入っているチャンネルを取得
         const member = interaction.member as GuildMember
         const current_channel = member.voice.channel
@@ -37,6 +48,7 @@ export default class OgiriCommand {
                 interaction,
                 `VCに入っていません`
             )
+            excuting=false
             return
         }
         let members = Array.from(current_channel.members.values())
@@ -47,6 +59,7 @@ export default class OgiriCommand {
                 interaction,
                 `お題の生成に失敗しました。もう一度実行してみたり、別のテーマを指定してみてください。`
             )
+            excuting=false
             return
         }
 
@@ -72,7 +85,8 @@ export default class OgiriCommand {
             simpleSuccessEmbed(
                 interaction,
                 `大喜利完了　テーマは「${theme}」でした。${target_member.displayName}の解答評価は${random}点です`
-            )              
+            )
+            excuting=false
         }
         const tick=async ()=>{
             setTimeout(async ()=>{
