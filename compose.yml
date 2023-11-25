@@ -1,0 +1,16 @@
+version: '3.2'
+services:
+  ai-service:
+    build:
+      context: ai-service/.docker
+      dockerfile: Dockerfile
+    volumes:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+  bot:
+    build:
+      context: bot/.docker
+      dockerfile: Dockerfile

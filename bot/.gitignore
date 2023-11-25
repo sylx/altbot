@@ -23,3 +23,6 @@ tests/
 
 #python
 __pycache__/
+
+# test data
+dump-*.bin
