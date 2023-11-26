@@ -100,7 +100,7 @@ export class Transcription {
     constructor(
     ) {
         this.client=new TranscriptionClient(
-            "localhost:1234",
+            `${process.env.AI_SERVICE_HOST}:${process.env.AI_SERVICE_PORT}`,
             grpc.credentials.createInsecure()
           )
     }

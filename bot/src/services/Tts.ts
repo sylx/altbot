@@ -37,7 +37,7 @@ export class Tts {
     }
     protected async connect(): Promise<TtsClient> {
         this.client=new TtsClient(
-            "localhost:1234",
+            `${process.env.AI_SERVICE_HOST}:${process.env.AI_SERVICE_PORT}`,
             grpc.credentials.createInsecure()
           )
         return new Promise((resolve, reject) => {

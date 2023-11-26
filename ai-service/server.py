@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 sys.path.append(f'{Path(__file__).parent}/MoeGoe')
 
+import os
 import grpc
 import transcription_pb2
 import transcription_pb2_grpc
@@ -22,7 +23,7 @@ from memory_profiler import profile
 
 _cleanup_coroutines = []
 
-async def serve():
+async def serve(port=1234):
     # Serverオブジェクトを作成する
     global server
     global _cleanup_coroutines
@@ -44,11 +45,11 @@ async def serve():
     reflection.enable_server_reflection(SERVICE_NAMES, server)
 
     # 1234番ポートで待ち受けするよう指定する
-    server.add_insecure_port("[::]:1234")
+    server.add_insecure_port(f"[::]:{port}")
     
     # 待ち受けを開始する
     await server.start()
-    print("gRPC server started on port 1234",file=sys.stderr)
+    print(f"gRPC server started on port {port}",file=sys.stderr)
 
     async def server_graceful_shutdown():
         print("Starting graceful shutdown...", file=sys.stderr)
@@ -72,7 +73,9 @@ if __name__ == "__main__":
     print("Starting gRPC server...", file=sys.stderr)
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(serve())
+        # port from environment variable
+        port = os.environ.get("PORT", 1234)
+        loop.run_until_complete(serve(port))
     finally:
         loop.run_until_complete(*_cleanup_coroutines)
         loop.close()
