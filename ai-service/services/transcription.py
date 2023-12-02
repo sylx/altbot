@@ -23,7 +23,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
     def __init__(self,pool) -> None:
         super().__init__()
         self.model=WhisperModel(
-            "small",
+            "medium",
             device="cuda",
             compute_type="float32",
             download_root="./.model_cache",
@@ -182,6 +182,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
                                             condition_on_previous_text=False,
                                             prefix=prefix,initial_prompt=initial_prompt,
                                             compression_ratio_threshold=1.5,
+                                            
                                             beam_size=3,language="ja",vad_filter=False,temperature=[0.0,0.2,0.4],best_of=2,
                                             word_timestamps=False)
         segments = list(segments) # generatorをlistに変換することでcoroutineを実行する
@@ -217,7 +218,14 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
                 sf.write(f, audio, 16000, format='OGG',subtype='OPUS')
                 opus = f.getvalue()
 
-            probability = compression_ratio > 3.0 and 0.1 or 0.8
+            probability = 0.0
+            if compression_ratio > 3.0:
+                probability = 0.1
+            else:
+                for s in segments:
+                    probability+=s.avg_logprob
+                probability = 1.0 - (probability / len(segments))
+            
             self.emit(
                 eventName="transcription",
                 eventData={

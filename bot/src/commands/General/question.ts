@@ -2,10 +2,10 @@ import { Discord, Slash,SlashOption,SlashGroup } from "@decorators"
 import { Guard } from "@guards"
 import { injectable } from "tsyringe"
 import { Category } from "@discordx/utilities"
-import { CommandInteraction, Client, GuildMember, ChannelType, Collection, ApplicationCommandOptionType,  VoiceChannel } from "discord.js"
+import { CommandInteraction, Client, GuildMember, ChannelType, Collection, ApplicationCommandOptionType,  VoiceChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Message, ComponentType } from "discord.js"
 import { resolveDependency, simpleErrorEmbed, simpleSuccessEmbed } from "@utils/functions"
-import { Gpt, QuestionAssistantData, QuetionSessionData, Transcription, Tts, VoiceChat } from "@services"
-import { TtsService } from "grpc/tts_grpc_pb"
+import { Gpt, QuestionAssistantData, QuestionUserData, QuetionSessionData, Transcription, Tts, VoiceChat } from "@services"
+import { EventEmitter } from "events"
 
 let excuting=false
 
@@ -66,10 +66,15 @@ export default class QuestionCommand {
             excuting=false
             return
         }
-        let session : QuetionSessionData | [] =[]
+        let session : QuetionSessionData | [] = []
+        const ui_emitter= new EventEmitter()
+        let current : QuestionUserData | null = null
+        let current_id : string | null = null
+
         while(true){
             session=await gpt.question(target_member.displayName,theme,session) as QuetionSessionData
             console.log(session)
+            this.updateEmbed(interaction,session as QuetionSessionData,target_member,ui_emitter)
             const last_assistant=session[session.length-1]?.data as QuestionAssistantData
             if(!last_assistant){
                 simpleErrorEmbed(
@@ -81,15 +86,52 @@ export default class QuestionCommand {
             }
             if(last_assistant.complete) break
             await tts.speak(last_assistant.text)
-            const prompt = `Q:「${last_assistant.text}」\nA:「`
-            const transcribe_result=await transcription.transcribeMember(conn,target_member,1700,"")              
-            session.push({
+
+            current={
+                text: "<聞き取り中...>",
+                probability: 0
+            } as QuestionUserData
+            (session as QuetionSessionData).push({
                 role: "user",
-                data: {
-                    text: transcribe_result.text,
-                    probability: transcribe_result.probability
-                }
+                data: current
             })
+            current_id=null
+            this.updateEmbed(interaction,session as QuetionSessionData,target_member,ui_emitter)
+
+            const prompt = `${members.map((member)=>{member.displayName}).join("、")}`
+            const transcribe_emitter=await transcription.transcribeMember(conn,target_member,1700,prompt)
+            ui_emitter.on("submit",()=>{
+                transcribe_emitter.emit("flush")
+                transcribe_emitter.emit("terminate")
+                this.updateEmbed(interaction,session as QuetionSessionData,target_member,ui_emitter)
+            })
+            ui_emitter.on("retry",()=>{
+                transcribe_emitter.emit("terminate")
+                let last
+                do{
+                    last=session.pop()
+                }while(last?.role !== "assistant")
+                this.updateEmbed(interaction,session as QuetionSessionData,target_member,ui_emitter)
+            })
+            await new Promise<void>((resolve,reject)=>{
+                transcribe_emitter.on("result",(result)=>{
+                    console.log({result,current,current_id})
+                    if(current_id && current_id !== result.id) return
+                    if(!current_id && current){
+                        current_id = result.id
+                        current.text = result.text
+                        current.probability = result.probability
+                    }else if(current){
+                        current.text = result.text
+                        current.probability = result.probability
+                    }
+                    this.updateEmbed(interaction,session as QuetionSessionData,target_member,ui_emitter)
+                })
+                transcribe_emitter.on("terminate",()=>{
+                    resolve()
+                })
+            })
+            ui_emitter.removeAllListeners()            
         }
         const last_assistant=session[session.length-1]?.data as QuestionAssistantData
         const acquired_info=last_assistant.acquired_info
@@ -104,6 +146,54 @@ export default class QuestionCommand {
             interaction,
             `尋問を完了：${target_member.displayName}の以下の情報を入手しました。\n${result}`
         )
+        //await voiceChat.leave()
         excuting=false
+    }
+    async updateEmbed(interaction: CommandInteraction,session: QuetionSessionData,target_member: GuildMember,emitter?: EventEmitter){
+        const last_assistant=session[session.length-1]?.data as QuestionAssistantData
+        const is_complete=last_assistant.complete
+        const embed = new EmbedBuilder()
+            .setColor(0xff0000)
+            .setTitle(is_complete ? `尋問結果` : `尋問中…`)
+            .setDescription(`対象者：${target_member.displayName}`)
+            .setFields(session.map(item=>{
+                    return {
+                        name: item.role == "assistant" ? "altbot" : target_member.displayName,
+                        value: item.data.text,                        
+                        inline: false
+                    }
+                }))
+            .setThumbnail(target_member.user.displayAvatarURL())
+        const buttons = [
+            new ButtonBuilder()
+                .setLabel('これで回答する')
+                .setStyle(ButtonStyle.Primary)
+                .setCustomId('submit')
+                .setDisabled(session[session.length - 1].role !== "user" ||
+                                 (session[session.length - 1].data as QuestionUserData).probability === 0),
+            new ButtonBuilder()
+                .setLabel('回答をやり直す')
+                .setStyle(ButtonStyle.Danger)
+                .setCustomId('retry')
+                .setDisabled(session.filter(item=>item.role === "user" && item.data.probability > 0).length === 0)
+        ]
+        const row=new ActionRowBuilder<ButtonBuilder>()
+            .addComponents(...buttons)
+        const msg = await interaction.editReply({
+            embeds: [embed],
+            //components: [row]
+        })
+        if(!emitter) return msg
+
+        const collector=msg.createMessageComponentCollector({ componentType: ComponentType.Button, time: 300_000 })
+        collector.on('collect', async i => {
+            if(i.user.id !== target_member.user.id) return
+            if(i.customId === "submit"){
+                emitter.emit("submit")
+            }else if(i.customId === "retry"){
+                emitter.emit("retry")
+            }
+        })
+        return msg
     }
 }

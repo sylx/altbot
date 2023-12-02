@@ -34,7 +34,7 @@ const questionShotDataAssistant : QuestionAssistantData = {
   acquired_info: []
 }
 
-const questionShotDataUser = {
+const questionShotDataUser : QuestionUserData = {
   text: "",
   probability: 0.8
 }
@@ -45,7 +45,7 @@ export type QuetionSessionData = [
     data: QuestionAssistantData
   } | {
     role: "user",
-    data: typeof questionShotDataUser
+    data: QuestionUserData
   }
 ]
 
@@ -53,6 +53,11 @@ export type QuestionAssistantData = {
   text: string,
   complete: boolean,
   acquired_info: string[]
+}
+
+export type QuestionUserData = {
+  text: string,
+  probability: number
 }
 
 @singleton()
@@ -272,6 +277,10 @@ export class Gpt {
       try{
         const new_session_data = [...session_data || []]
         const data=this.parseJson(response) as QuestionAssistantData
+        //たまに変なデータが来るので
+        if(!Array.isArray(data.acquired_info) && data.acquired_info){
+          data.acquired_info=[data.acquired_info]
+        }
         new_session_data.push({
           role: "assistant",
           data

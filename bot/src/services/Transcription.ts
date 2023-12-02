@@ -12,6 +12,7 @@ import { Logger } from "./Logger"
 import { writeFile, writeFileSync } from "fs"
 import { Data, NgWord } from "@entities"
 import { Database } from "./Database"
+import { databaseConfig } from "@config"
 
 
 //まとめて送りつけるパケット数(1パケットの長さはだいたい20ms)
@@ -97,11 +98,12 @@ export class TranscriptionWriteStream extends Writable{
     }
 }
 
+type ApiStream = grpc.ClientDuplexStream<DiscordOpusPacketList,TranscriptionEvent>
+
 @singleton()
 export class Transcription {
     public client : TranscriptionClient
     protected emitter: EventEmitter = new EventEmitter()
-    protected api_stream : grpc.ClientDuplexStream<DiscordOpusPacketList,TranscriptionEvent> | null = null
     protected listeningStatus : {[key: string]: boolean} = {}
 
     constructor(
@@ -114,16 +116,13 @@ export class Transcription {
     on(event: string, listener: (...args: any[]) => void) : void{
         this.emitter.on(event,listener)
     }
-    async connectApi(emitter: EventEmitter) : Promise<void>{
-        if(this.api_stream !== null) throw new Error("already connected")
-
-        this.api_stream = this.client.transcriptionBiStreams()
-        this.api_stream?.on("error", (err) => {
+    protected connectApi(emitter: EventEmitter) : ApiStream{
+        const api_stream = this.client.transcriptionBiStreams()
+        api_stream?.on("error", (err) => {
             console.error(err)
-            this.api_stream = null
         })
         .on("data", (response : TranscriptionEvent) => {
-            //console.log("from server",response.getEventname(),response.getEventdata(),response.getOpusdata().length)
+            console.log("from server",response.getEventname(),response.getEventdata(),response.getOpusdata().length)
             try {
                 const data=JSON.parse(response.getEventdata())
                 data.opusData=response.getOpusdata()
@@ -137,8 +136,9 @@ export class Transcription {
         })
         .on("end", () => {
             console.log("api read end")
-            this.api_stream = null
+            emitter.emit("api_end")
         })
+        return api_stream
     }
 
     async startListen(connection: VoiceConnection,channel: VoiceChannel,prompt: string | Function) : Promise<void>{
@@ -188,41 +188,78 @@ export class Transcription {
         })
     }
 
-    async stopListen() : Promise<void>{
-        this.api_stream?.end()
-        this.api_stream=null
-    }
-
-    async transcribeMember(connection: VoiceConnection,member: GuildMember, timeout: number,prompt: string) : Promise<TranscribeResult>{
+    async transcribeMember(connection: VoiceConnection,member: GuildMember, timeout: number,prompt: string) : Promise<EventEmitter>{
         const user = member.user
-        if(this.api_stream === null){
-            await this.connectApi(this.emitter)
-        }
-        const write_stream = new TranscriptionWriteStream(this.api_stream as any,user.id,prompt,false,true)
+        const emitter=new EventEmitter()
+        const api_stream=await this.connectApi(emitter)
+        const id=`${user.id}_${Date.now()}`
+        let first_result_packet_timestamp : number | null = null
+        let current_data_text: string | null = null
+        let current_data_probability: number | null = null
+        const write_stream = new TranscriptionWriteStream(api_stream as any,id,prompt)
         const receiver = connection.receiver;
-        return new Promise((resolve,reject)=>{
-            receiver.speaking.once('start', async (userId) => {
-                const now = Date.now()                
-                console.log(`listen start ${member.displayName}(${member.user.username})`,"info")
-                this.emitter.once("transcription",async (data: any)=>{
-                    console.log("transcription",data)
-                    console.log("last",now - data.packet_timestamp)
-                    resolve({
-                        text: data.text,
-                        probability: data.probability
-                    })
-                })
-                setTimeout(()=>{
-                    console.log(`listen timeout ${member.displayName}(${member.user.username})`,"info")
-                    resolve({
-                        text: "",
-                        probability: 0
-                    })
-                },30 * 1000)
-                await this.listen(connection,member,timeout,write_stream)
-                console.log(`listen end ${member.displayName}(${member.user.username})`,"info")
+        console.log("connect api")
+        let already_listen = false
+        const onSpeakingStart = async (userId: string) => {
+            if(userId !== user.id) return
+            if(already_listen) return
+            already_listen = true            
+            console.log(`${member.displayName} speaking start`)
+            const opusStream=receiver.subscribe(userId, {
+                end: {
+                    behavior: EndBehaviorType.AfterSilence,
+                    duration: timeout,
+                },
             })
-        })
+            opusStream
+                .pipe(write_stream)
+                .on("finish",async ()=>{
+                    console.log("write end")
+                    setTimeout(()=>{
+                        console.log("timeout")
+                        emitter.emit("terminate")
+                    },10_000) //packet送信が終わって10秒衣内に結果が返ってこない場合は終了
+                })
+                .on("error",(err)=>{
+                    console.error(err)
+                    emitter.emit("terminate")
+                })
+            emitter.on("api_end",()=>{
+                console.log("api end")
+                emitter.emit("terminate")
+            })
+            emitter.on("transcription",async (data: any)=>{
+                if(data.speaker_id !== id) return
+                console.log("received",data)
+                if(first_result_packet_timestamp === null){
+
+                    first_result_packet_timestamp = data.packet_timestamp
+                    current_data_text = data.text
+                    current_data_probability = data.probability
+                }else if(first_result_packet_timestamp < data.packet_timestamp){
+                    if(data.probability < 0.3) return
+                    //後ろの音声のデータなので、前回結果に追加する
+                    current_data_text += data.text
+                    current_data_probability = Math.min(current_data_probability as number,data.probability)
+                }
+                emitter.emit("flush")
+            })
+            emitter.on("flush",()=>{
+                emitter.emit("result",{
+                    id,
+                    text: current_data_text,
+                    probability: current_data_probability
+                })
+            })
+            emitter.on("terminate",()=>{
+                write_stream.end()
+                api_stream.end()
+
+                receiver.speaking.off('start', onSpeakingStart)
+            })
+        }            
+        receiver.speaking.on('start', onSpeakingStart)
+        return emitter
     }
 
         
