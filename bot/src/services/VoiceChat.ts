@@ -8,10 +8,11 @@ import {
     AudioPlayerStatus, getVoiceConnections,
 } from "@discordjs/voice"
 
-import { VoiceChannel } from "discord.js"
+import { GuildMember, VoiceChannel } from "discord.js"
 import { Client } from "discordx"
 
 import { EventEmitter } from "events"
+import { Transcription } from "./Transcription"
 
 @singleton()
 export class VoiceChat {

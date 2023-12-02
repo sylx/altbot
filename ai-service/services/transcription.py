@@ -163,8 +163,8 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         
         transcription_start_time = time.time()
         
-        initial_prompt = prompt + '。'+''.join(self.transcribed_history.get(speaker_id,[]))
-        # initial_prompt = prompt
+        #initial_prompt = prompt + '。'+''.join(self.transcribed_history.get(speaker_id,[]))
+        initial_prompt = prompt
         prefix=''        
         #prefix=''.join(self.transcribed_history.get(speaker_id,[]))
         audio = b''.join([f.getAudio() for f in target_voiced_frames])
@@ -192,18 +192,17 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         if len(segments) > 0:
             # voiced_framesにtextを設定する
             whole_text = ''.join([s.text for s in segments])
+            # probability = 0
+            # for s in segments:
+            #     probability+=s.probability
+            # probability = probability / len(segments)
+
             temperature = [s.temperature for s in segments]
             compression_ratio = sum([s.compression_ratio for s in segments]) / len(segments)            
             print(f"transcribed result: {whole_text} {temperature} {compression_ratio}")
             # dump
             for vf in target_voiced_frames:
                 vf.transcribed = True
-
-            if compression_ratio > 3.0:
-                # compression_retio_threshold設定してるのに、なぜか超えてしまう場合がある
-                print(f"ignore result since compression_ratio={compression_ratio} {temperature} {whole_text}")
-                lock.release()
-                return
 
             # 結果を保存する
             if self.transcribed_history.get(speaker_id) is None:
@@ -218,6 +217,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
                 sf.write(f, audio, 16000, format='OGG',subtype='OPUS')
                 opus = f.getvalue()
 
+            probability = compression_ratio > 3.0 and 0.1 or 0.8
             self.emit(
                 eventName="transcription",
                 eventData={
@@ -229,6 +229,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
                         "speaker_id": speaker_id,
                         "temperature": temperature,
                         "compression_ratio": compression_ratio,
+                        "probability": probability,
                 },
                 opusData=opus
             )

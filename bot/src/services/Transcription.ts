@@ -17,6 +17,12 @@ import { Database } from "./Database"
 //まとめて送りつけるパケット数(1パケットの長さはだいたい20ms)
 const SEND_PACKET_NUM = 20
 
+export type TranscribeResult = {
+    text: string
+    probability: number
+}
+
+
 export class TranscriptionWriteStream extends Writable{
     protected packetList : DiscordOpusPacketList | null = null
     protected packetDump : Array<DiscordOpusPacket> = []
@@ -24,7 +30,8 @@ export class TranscriptionWriteStream extends Writable{
         protected api_bi_stream : grpc.ClientDuplexStream<DiscordOpusPacketList,TranscriptionEvent> | null,
         protected speaker_id: string,
         protected prompt: string = "",
-        protected keepPacket: boolean = false
+        protected keepPacket: boolean = false,
+        protected passWholePacket: boolean = false,
     ){ 
         super()
     }
@@ -39,7 +46,7 @@ export class TranscriptionWriteStream extends Writable{
         packet.setTimestamp(Date.now())
         this.packetList.addPackets(packet)
         let err: Error | null = null
-        if(this.packetList.getPacketsList().length >= SEND_PACKET_NUM){
+        if(!this.passWholePacket && this.packetList.getPacketsList().length >= SEND_PACKET_NUM){
             err = this._flush(false)
         }
         callback(err)
@@ -144,7 +151,6 @@ export class Transcription {
                 logger.log(`listen start ${member.displayName}(${member.user.username})`,"info")
                 this.listeningStatus[userId] = true
                 const prompt_str = typeof prompt === "function" ? await prompt() : prompt
-                await this.listen(connection,member,prompt_str)
                 this.listeningStatus[userId] = false
                 logger.log(`listen end ${member.displayName}(${member.user.username})`,"info")
             }
@@ -186,24 +192,56 @@ export class Transcription {
         this.api_stream?.end()
         this.api_stream=null
     }
-        
-    protected async listen(connection: VoiceConnection,member: GuildMember,prompt: string = ""){
+
+    async transcribeMember(connection: VoiceConnection,member: GuildMember, timeout: number,prompt: string) : Promise<TranscribeResult>{
         const user = member.user
         if(this.api_stream === null){
             await this.connectApi(this.emitter)
         }
-        const write_stream = new TranscriptionWriteStream(this.api_stream as any,user.id,prompt)
+        const write_stream = new TranscriptionWriteStream(this.api_stream as any,user.id,prompt,false,true)
+        const receiver = connection.receiver;
+        return new Promise((resolve,reject)=>{
+            receiver.speaking.once('start', async (userId) => {
+                const now = Date.now()                
+                console.log(`listen start ${member.displayName}(${member.user.username})`,"info")
+                this.emitter.once("transcription",async (data: any)=>{
+                    console.log("transcription",data)
+                    console.log("last",now - data.packet_timestamp)
+                    resolve({
+                        text: data.text,
+                        probability: data.probability
+                    })
+                })
+                setTimeout(()=>{
+                    console.log(`listen timeout ${member.displayName}(${member.user.username})`,"info")
+                    resolve({
+                        text: "",
+                        probability: 0
+                    })
+                },30 * 1000)
+                await this.listen(connection,member,timeout,write_stream)
+                console.log(`listen end ${member.displayName}(${member.user.username})`,"info")
+            })
+        })
+    }
+
+        
+    protected async listen(connection: VoiceConnection,member: GuildMember,timeout: number,write_stream: TranscriptionWriteStream){
+        const user = member.user
+        if(this.api_stream === null){
+            await this.connectApi(this.emitter)
+        }
 
         const receiver = connection.receiver;
         const opusStream=receiver.subscribe(user.id, {
             end: {
                 behavior: EndBehaviorType.AfterSilence,
-                duration: 500,
+                duration: timeout,
             },
         })
         return new Promise((resolve,reject)=>{
             opusStream
-                .pipe(write_stream as TranscriptionWriteStream)
+                .pipe(write_stream)
                 .on("finish",async ()=>{
                     console.log("write end")
                     resolve()

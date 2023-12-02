@@ -1,6 +1,11 @@
 import { delay, inject, singleton } from "tsyringe"
 import OpenAI from 'openai';
 
+const commonSettings = [
+  `あなたの名前は「アルトボット」で、チャットルームを管理するAIアシスタントである。`,
+  `あなたにはチャットルームでの議論を健全なものに保つ義務があり、またその為の権限は全て所有している。`,
+  `あなたは敬語は使わず、ため口で、日本在住の中国人の口調で、ユーザーの名前が入る場所には{username}と、話す必要がある。`
+]
 const makeNgWordShotData = {
     synonyms: ["ネトサポ","ウヨ","右翼"],
     gentle_reactions: ["政治の話はやめて、サムギョプサル焼けてるよ！","サムゲタン食べる？","{username}落ち着いてよ","思想は色々だからね"],
@@ -23,6 +28,32 @@ const makeOgiriShotData = {
   guilty_review: "{username}には失望したよ。口を閉じて、どのような立場であっても、二度と発言しないで欲しい。再教育センターでの学習を通告します"
 }
 
+const questionShotDataAssistant : QuestionAssistantData = {
+  text: "私はチャットルームを指導するAIだ。今から尋問を開始する！お前の名前は？",
+  complete: false,
+  acquired_info: []
+}
+
+const questionShotDataUser = {
+  text: "",
+  probability: 0.8
+}
+
+export type QuetionSessionData = [
+  {
+    role: "assistant",
+    data: QuestionAssistantData
+  } | {
+    role: "user",
+    data: typeof questionShotDataUser
+  }
+]
+
+export type QuestionAssistantData = {
+  text: string,
+  complete: boolean,
+  acquired_info: string[]
+}
 
 @singleton()
 export class Gpt {
@@ -184,6 +215,68 @@ export class Gpt {
       })
       try{
         return this.parseJson(response) as typeof makeOgiriShotData
+      }catch(e: any){
+        console.log("response error",response)
+        console.error(e)
+      }
+      return null
+    }
+    async question(name: string,target: string,session_data: QuetionSessionData | []): Promise<QuetionSessionData | null>{
+      const system_content = `
+      設定: あなたの名前は「アルトボット」で、チャットルームを管理するAIアシスタントである。
+      設定: あなたは上位の存在である指導部からの指令により、チャットルームでの議論を健全なものに保つ義務があり、時にはユーザーに強い口調で適正な態度を指導する必要がある。あなたは自分が所属している組織を当局と呼称している。
+      設定: あなたは敬語は使わず、日本在住の中国人の口調で、ため口や悪態、強い口調で指導を行う。
+      設定: あなたはのユーザー「${name}」に尋問を行い、ユーザーの情報を入手する。この取り調べでは、ユーザーの「${target}」の情報を入手する。
+      設定: 虚偽の情報を収集しないように注意する必要がある。またユーザーのはぐらかしには関連する質問に変えるなど、周辺の情報を収集しながら、核心に迫る必要がある。
+      設定: ユーザーの回答は"text"と"probability"のキーを持つJSONで与えられる。textは音声認識処理の結果で、probabilityは聞き取ったテキストの正確性である。
+      設定: あなたがユーザーに対して質問や返答などの発言を行う場合は、"text"と"complete","acquired_info"のキーを持つJSONを返す。textにはユーザーに対しての発言内容をテキストで、completeには、セッションが完了したかどうかをboolean値で、acquired_infoには配列で獲得した情報（虚偽と思しき情報も含む）を簡潔な文章にしてテキストで格納する。
+      設定: 規定の情報の収集が完了、または情報の取得が不可能だとあなたが判断した場合は、completeをtrueにして、acquired_infoには、ユーザーの情報を簡潔な文章にしてテキストで格納する。
+      設定: 質問する場合は、必ずユーザーの名前を呼び、正確で正直な回答を行うよう、厳しく指導する。
+      `    
+
+      const oneshot_assistant={...questionShotDataAssistant}
+      const oneshot_user={...questionShotDataUser}
+      oneshot_assistant.acquired_info=[`ユーザーの名前は${name}である。`]
+      oneshot_user.text=`${name}です`
+      const response = await this.openai?.chat.completions.create({
+        model: "gpt-3.5-turbo-1106",
+        messages: [
+          {
+            "role": "system",
+            "content": system_content
+          },
+          {
+            "role": "assistant",
+            "content": JSON.stringify(oneshot_assistant,null,2)
+          },
+          {
+            "role": "user",
+            "content": JSON.stringify(oneshot_user,null,2)
+          },
+          ...(session_data.map(d=>{
+            return {
+              role: d.role,
+              content: JSON.stringify(d.data,null,2)
+            }
+          }))
+        ],
+        response_format: {
+          type: "json_object"
+        },
+        temperature: 1,
+        max_tokens: 4000,
+        top_p: 1,
+        frequency_penalty: 1.0,
+        presence_penalty: 0,
+      })
+      try{
+        const new_session_data = [...session_data || []]
+        const data=this.parseJson(response) as QuestionAssistantData
+        new_session_data.push({
+          role: "assistant",
+          data
+        })
+        return new_session_data as QuetionSessionData
       }catch(e: any){
         console.log("response error",response)
         console.error(e)
