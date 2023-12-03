@@ -53,6 +53,10 @@ export default class SayCommand {
 				`言います: ${text}`
 			)
 			await repeat(text, count, count)
+			await simpleSuccessEmbed(
+				interaction,
+				`言いました ${count}回`
+			)
 		}catch( err: any ){
 			if(err == "yet join voice channel"){
 				simpleErrorEmbed(

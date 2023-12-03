@@ -29,6 +29,7 @@ export class Tts {
     protected isPlaying : boolean = false
     protected cache : Map<string,Buffer> = new Map()
     constructor(
+        protected abortController: AbortController,
         @inject(delay(() => VoiceChat)) private voiceChat: VoiceChat,
     ) {
         this.connect().then((client)=>{
@@ -51,13 +52,15 @@ export class Tts {
         })
     }
 
-    getClient() : TtsClient{
-        return this.client
+    getClient(): TtsClient {
+        return this.client;
     }
-    getPlayer() : AudioPlayer{
-        return this.voiceChat.getPlayer()
+
+    getPlayer(): AudioPlayer {
+        return this.voiceChat.getPlayer();
     }
-    async playNextInQueue(): Promise<void> {
+
+    protected async playNextInQueue(): Promise<void> {
         if(this.isPlaying) return
         if(this.playQueue.length > 0) {
             this.isPlaying=true
@@ -66,50 +69,45 @@ export class Tts {
                 inputType: StreamType.OggOpus,
             })
             this.getPlayer().play(resource)
-            await entersState(this.getPlayer(), AudioPlayerStatus.Playing, 5_000)
-            await new Promise(resolve => {
-                this.getPlayer().once(AudioPlayerStatus.Idle, resolve)
-            })
-            //ここで再生が終わった
+            await entersState(this.getPlayer(), AudioPlayerStatus.Playing,this.abortController.signal)
+            console.log("waiting...")
+            await entersState(this.getPlayer(), AudioPlayerStatus.Idle, this.abortController.signal)
+            //ここで再生が終わった?
             this.playQueue.shift()
             this.isPlaying=false
-            //console.log("playend queue",this.playQueue.length)
             await this.playNextInQueue();
         }else{
-            console.log("queue is empty")
+            console.log("queue is empty",this.getPlayer().state.status)
         }
     }
 
-    abort() : void{
-        this.getPlayer().stop()
-        this.playQueue=[]
+    abort(): void {
+        console.log("abort");
+        this.getPlayer().stop();
+        this.playQueue = [];
+        this.isPlaying = false;
+        this.abortController.abort();
+        this.abortController = new AbortController();
     }
 
-
-    speak(text: string,option?: TtsSpeakOptions) : Promise<void>{
+    async speak(text: string,option?: TtsSpeakOptions) : Promise<void>{
         if(!this.voiceChat.isEnable()){
             throw new Error("not connected voice channel")
         }
-        let imediate=option?.imediate 
+        if(option?.imediate) this.abort()
         if(option?.useCache){
             const buffer=this.cache.get(text)
             if(buffer && option?.silent !== true){
                 console.log("from cache",text)
                 const stream = Readable.from(buffer)
-                // if(imediate === true){
-                //     imediate=false
-                //     this.getPlayer().stop()
-                //     this.playQueue=[]
-                //     this.isPlaying=false
-                // }
                 this.playQueue.push(stream)
-                return this.playNextInQueue();
+                await this.playNextInQueue()
+                return Promise.resolve()
             }
         }
         const req = new TtsSpeakRequest()
         req.setText(text)
         const stream=this.client.speakStream(req)
-
         return new Promise((resolve, reject) => {
             stream.on("data", async (response : TtsSpeakResponse) => {
                 const audio = response.getAudio()
@@ -124,18 +122,17 @@ export class Tts {
                     }
                     console.log("queue",this.playQueue.length,response.getText())
                     if(option?.silent !== true){
-                        // if(imediate === true){
-                        //     imediate=false
-                        //     this.getPlayer().stop()
-                        //     this.playQueue=[]
-                        // }
                         this.playQueue.push(oggStream)
-                        await this.playNextInQueue()
+                        if(!this.isPlaying){                        
+                            this.playNextInQueue()
+                        }
                     }
                 }
             }).on("end", async () => {
-                console.log("recieve end")
-                await entersState(this.getPlayer(), AudioPlayerStatus.Idle, 2 ** 31 - 1)
+                //これ以降queueが追加されることはないが、まだ再生中かもしれない
+                do{
+                    await entersState(this.getPlayer(), AudioPlayerStatus.Idle, this.abortController.signal)
+                }while(this.playQueue.length > 0)
                 resolve()
             }).on("error", (err) => {
                 console.error(err)
