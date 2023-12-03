@@ -1,18 +1,14 @@
 
 import * as grpc from "@grpc/grpc-js"
-import { GuildMember, User, VoiceChannel } from "discord.js"
-import { delay, inject, singleton } from "tsyringe"
+import { GuildMember, VoiceChannel } from "discord.js"
+import { singleton } from "tsyringe"
 import { TranscriptionClient } from "../../grpc/transcription_grpc_pb"
-import { TranscriptionEvent,DiscordOpusPacket,DiscordOpusPacketList } from "../../grpc/transcription_pb"
+import { TranscriptionEvent, DiscordOpusPacket, DiscordOpusPacketList } from "../../grpc/transcription_pb"
 import { Writable } from "stream"
 import { EndBehaviorType, VoiceConnection } from "@discordjs/voice"
 import { EventEmitter } from "events"
 import { resolveDependency } from "@utils/functions"
 import { Logger } from "./Logger"
-import { writeFile, writeFileSync } from "fs"
-import { Data, NgWord } from "@entities"
-import { Database } from "./Database"
-import { databaseConfig } from "@config"
 
 
 //まとめて送りつけるパケット数(1パケットの長さはだいたい20ms)

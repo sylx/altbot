@@ -237,7 +237,7 @@ export class Gpt {
       設定: あなたがユーザーに対して質問や返答などの発言を行う場合は、"text"と"complete","acquired_info"のキーを持つJSONを返す。textにはユーザーに対しての発言内容をテキストで、completeには、セッションが完了したかどうかをboolean値で、acquired_infoには配列で獲得した情報（虚偽と思しき情報も含む）を簡潔な文章にしてテキストで格納する。
       設定: 規定の情報の収集が完了、または情報の取得が不可能だとあなたが判断した場合は、completeをtrueにして、acquired_infoには、ユーザーの情報を簡潔な文章にしてテキストで格納する。
       設定: 質問する場合は、必ずユーザーの名前を呼び、正確で正直な回答を行うよう、厳しく指導する。
-      `    
+      `
 
       const oneshot_assistant={...questionShotDataAssistant}
       const oneshot_user={...questionShotDataUser}
