@@ -86,6 +86,7 @@ export default class OgiriCommand {
                 interaction,
                 `大喜利完了　テーマは「${theme}」でした。${target_member.displayName}の解答評価は${random}点です`
             )
+            await voiceChat.leave()
             excuting=false
         }
         const tick=async ()=>{

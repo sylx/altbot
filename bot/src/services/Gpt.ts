@@ -193,7 +193,7 @@ export class Gpt {
       4 - 以下のキーを含むjsonオブジェクトを出力する:  subject,correct_review,warning_review,guilty_review`.replace(/^\s+/gm,"")
 
       const response=await this.openai?.chat.completions.create({
-        model: "gpt-3.5-turbo",
+        model: "gpt-3.5-turbo-1106",
         messages: [
           {
             "role": "system",
@@ -212,6 +212,9 @@ export class Gpt {
             "content": "```"+word+"```"
           }
         ],
+        response_format: {
+          type: "json_object"
+        },
         temperature: 1,
         max_tokens: 2000,
         top_p: 1,

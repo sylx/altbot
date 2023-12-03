@@ -146,7 +146,7 @@ export default class QuestionCommand {
             interaction,
             `尋問を完了：${target_member.displayName}の以下の情報を入手しました。\n${result}`
         )
-        //await voiceChat.leave()
+        await voiceChat.leave()
         excuting=false
     }
     async updateEmbed(interaction: CommandInteraction,session: QuetionSessionData,target_member: GuildMember,emitter?: EventEmitter){
