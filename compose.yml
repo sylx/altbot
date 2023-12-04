@@ -1,18 +1,20 @@
 version: '3.2'
 services:
   ai-service:
-    image: altbot-ai-service
+    image: altbot-ai-service:latest
     volumes:
       - ./ai-service:/app
       - vits-models:/app/vits_models
       - model-cache:/app/.model_cache
     working_dir: /app
-    command: ["python", "server.py"]
+    command: ["python","server.py"]
     deploy:
       resources:
         reservations:
           devices:
-            - capabilities: [gpu]
+            - driver: nvidia
+              count: 1          
+              capabilities: [gpu]
   bot:
     image: altbot-bot
     volumes:
