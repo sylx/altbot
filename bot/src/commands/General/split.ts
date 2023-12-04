@@ -29,7 +29,7 @@ export default class SplitCommand {
 	) {
         // 呼び出したメンバーの入るチャンネルを取得
         const member = interaction.member as GuildMember
-        const current_channel = member.voice.channel
+        const current_channel = member.voice.channel as VoiceChannel
 		const voiceChat = await resolveDependency(VoiceChat)
         const tts = await resolveDependency(Tts)
         
@@ -116,7 +116,7 @@ export default class SplitCommand {
 		{ localize }: InteractionData
     ){
         const member = interaction.member as GuildMember
-        const current_channel = member.voice.channel
+        const current_channel = member.voice.channel as VoiceChannel
 		const voiceChat = await resolveDependency(VoiceChat)
         const tts = await resolveDependency(Tts)                    
 

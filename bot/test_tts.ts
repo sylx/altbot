@@ -3,17 +3,11 @@ import * as grpc from "@grpc/grpc-js"
 import "reflect-metadata"
 import { TtsClient } from "./grpc/tts_grpc_pb"
 import { TtsSpeakRequest,TtsSpeakResponse} from "./grpc/tts_pb"
-import Speaker from "speaker"
 import { OpusEncoder } from "@discordjs/opus"
 import { Readable } from "node:stream"
 import { propertiesMapper } from "@tsed/schema"
 import { opus } from "prism-media"
 
-const speaker = new Speaker({
-    channels: 2,          // 2 channels
-    bitDepth: 16,         // 16-bit samples
-    sampleRate: 48000     
-  });
 const encoder = new OpusEncoder(48000, 2);  
 
 async function main(){
@@ -51,7 +45,6 @@ async function main(){
             demuxer.on("data",(packet)=>{
                 const samplesDecoded = encoder.decode(packet);
                 duration += samplesDecoded.length / 48000 / 2 * 1000
-                speaker.write(samplesDecoded)
             }).on("error",(err)=>{
                 console.error(err)
             })

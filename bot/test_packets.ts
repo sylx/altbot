@@ -4,17 +4,10 @@ import "reflect-metadata"
 import { TranscriptionClient } from "./grpc/transcription_grpc_pb"
 import { DiscordOpusPacketList,DiscordOpusPacket,TranscriptionEvent } from "./grpc/transcription_pb"
 import { TranscriptionWriteStream } from "./src/services/Transcription"
-import Speaker from "speaker"
 import { OpusEncoder } from "@discordjs/opus"
 import prism from "prism-media"
-import { Writable } from "@tsed/core"
 import { Readable, Stream } from "node:stream"
 
-const speaker = new Speaker({
-    channels: 2,          // 2 channels
-    bitDepth: 16,         // 16-bit samples
-    sampleRate: 48000     
-  });
 const encoder = new OpusEncoder(48000, 2);  
  
 const client = new TranscriptionClient(
@@ -134,7 +127,7 @@ async function streamTest(speaker_id: string,packets: Array<any>,delay: number){
                         const demuxer = new prism.opus.OggDemuxer();
                         demuxer.on("data", (buffer) => {
                             const samplesDecoded = encoder.decode(buffer);      
-                            speaker.write(samplesDecoded)
+                            //speaker.write(samplesDecoded)
                             setTimeout(resolve, data.duration + 1000)
                         }).on("end",()=>{
                         }).on("error",(err)=>{

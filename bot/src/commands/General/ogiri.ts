@@ -38,7 +38,7 @@ export default class OgiriCommand {
 
         // 呼び出したメンバーの入っているチャンネルを取得
         const member = interaction.member as GuildMember
-        const current_channel = member.voice.channel
+        const current_channel = member.voice.channel as VoiceChannel
 		const voiceChat = await resolveDependency(VoiceChat)
         const tts = await resolveDependency(Tts)
         const gpt = await resolveDependency(Gpt)

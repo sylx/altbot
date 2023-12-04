@@ -261,9 +261,8 @@ export class Transcription {
         
     protected async listen(connection: VoiceConnection,member: GuildMember,timeout: number,write_stream: TranscriptionWriteStream){
         const user = member.user
-        if(this.api_stream === null){
-            await this.connectApi(this.emitter)
-        }
+        const emitter=new EventEmitter()
+        const api_stream=await this.connectApi(emitter)
 
         const receiver = connection.receiver;
         const opusStream=receiver.subscribe(user.id, {
