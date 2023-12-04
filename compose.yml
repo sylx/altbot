@@ -1,16 +1,35 @@
 version: '3.2'
 services:
   ai-service:
-    build:
-      context: ai-service/.docker
-      dockerfile: Dockerfile
+    image: altbot-ai-service
     volumes:
+      - ./ai-service:/app
+      - vits-models:/app/vits_models
+      - model-cache:/app/.model_cache
+    working_dir: /app
+    command: ["python", "server.py"]
     deploy:
       resources:
         reservations:
           devices:
             - capabilities: [gpu]
   bot:
-    build:
-      context: bot/.docker
-      dockerfile: Dockerfile
+    image: altbot-bot
+    volumes:
+      - bot-database:/app/database
+      - bot-logs:/app/logs
+    depends_on:
+      - ai-service
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - TEST_GUILD_ID=${TEST_GUILD_ID}
+      - BOT_OWNER_ID=${BOT_OWNER_ID}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - AI_SERVICE_HOST="ai-service"
+      - AI_SERVICE_PORT="1234"
+
+volumes:
+  vits-models:
+  model-cache:
+  bot-database:
+  bot-logs:
