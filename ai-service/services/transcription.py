@@ -12,7 +12,6 @@ import transcription_pb2_grpc
 
 from libs.vad import VAD
 
-from memory_profiler import profile
 import json
 import threading
 import time

@@ -18,9 +18,6 @@ from services.tts import Tts
 import asyncio
 import concurrent.futures
 
-from memory_profiler import profile
-
-
 _cleanup_coroutines = []
 
 async def serve(port=1234):

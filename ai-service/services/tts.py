@@ -9,7 +9,6 @@ import io
 import tts_pb2
 import tts_pb2_grpc
 
-from memory_profiler import profile
 dev = "cuda:0"
 import asyncio
 import threading
@@ -18,9 +17,7 @@ from libs.reverb import SchroederReverb
 
 from scipy.signal import butter, lfilter
 
-import psola
-import random
-from libs.tune import autotune
+#from libs.tune import autotune
 
 from libs.vits_japros.model import VITSJaProsModel
 from libs.vits_japros.text import g2p
