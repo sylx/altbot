@@ -18,17 +18,18 @@ services:
   bot:
     image: altbot-bot
     volumes:
+      - ./bot:/app/host
       - bot-database:/app/database
       - bot-logs:/app/logs
     depends_on:
       - ai-service
     environment:
-      - BOT_TOKEN=${BOT_TOKEN}
-      - TEST_GUILD_ID=${TEST_GUILD_ID}
-      - BOT_OWNER_ID=${BOT_OWNER_ID}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - AI_SERVICE_HOST="ai-service"
-      - AI_SERVICE_PORT="1234"
+      BOT_TOKEN: "${BOT_TOKEN}"
+      TEST_GUILD_ID: "${TEST_GUILD_ID}"
+      BOT_OWNER_ID: "${BOT_OWNER_ID}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY}"
+      AI_SERVICE_HOST: "ai-service"
+      AI_SERVICE_PORT: "1234"
 
 volumes:
   vits-models:
