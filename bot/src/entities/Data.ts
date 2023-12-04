@@ -17,6 +17,7 @@ type VoiceChannelIds ={
     lastMaintenance: Date.now(),
     lastStartup: Date.now(),
     lastVoiceChannel: null as VoiceChannelIds | null,
+    ttsDefaultSpeakerId: 1 as number,
 }
 
 type DataType = keyof typeof defaultData

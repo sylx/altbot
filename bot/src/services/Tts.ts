@@ -9,17 +9,19 @@ import {
 } from "@discordjs/voice"
 
 
-import { TtsSpeakRequest, TtsSpeakResponse, TtsSpeakerInfoList, TtsSpeakerSelect } from "../../grpc/tts_pb"
+import { TtsSpeakRequest, TtsSpeakResponse, TtsSpeakerInfoList } from "../../grpc/tts_pb"
 import * as google_protobuf_empty_pb from "google-protobuf/google/protobuf/empty_pb"
 
 import { Readable } from "stream"
-import { VoiceChat } from "./VoiceChat"
+import { VoiceChat,Database } from "@services"
+import { Data } from "@entities"
 
 interface TtsSpeakOptions {
     useCache?: boolean,
     silent?: boolean,
     imediate?: boolean
 }
+
 
 @singleton()
 @injectable()
@@ -28,12 +30,20 @@ export class Tts {
     public playQueue : Array<Readable> = []
     protected isPlaying : boolean = false
     protected cache : Map<string,Buffer> = new Map()
+    protected defaultSpeakerId: number = 1
     constructor(
         protected abortController: AbortController,
         @inject(delay(() => VoiceChat)) private voiceChat: VoiceChat,
+        @inject(delay(() => Database)) private db: Database,
     ) {
         this.connect().then((client)=>{
             console.log("connected tts server")
+        })
+        const dataRepository = db.get(Data)
+        dataRepository.get('ttsDefaultSpeakerId').then((speaker_id) => {
+            if(speaker_id){
+                this.defaultSpeakerId=speaker_id
+            }
         })
     }
     protected async connect(): Promise<TtsClient> {
@@ -58,6 +68,16 @@ export class Tts {
 
     getPlayer(): AudioPlayer {
         return this.voiceChat.getPlayer();
+    }
+
+    setDefaultSpeakerId(speaker_id: number): void {
+        this.defaultSpeakerId=speaker_id
+        const dataRepository = this.db.get(Data)
+        dataRepository.set('ttsDefaultSpeakerId',speaker_id)
+    }
+
+    getDefaultSpeakerId(): number {
+        return this.defaultSpeakerId
     }
 
     protected async playNextInQueue(): Promise<void> {
@@ -90,7 +110,7 @@ export class Tts {
         this.abortController = new AbortController();
     }
 
-    async speak(text: string,option?: TtsSpeakOptions) : Promise<void>{
+    async speak(text: string,speaker_id?: number | null,option?: TtsSpeakOptions) : Promise<void>{
         if(!this.voiceChat.isEnable()){
             throw new Error("not connected voice channel")
         }
@@ -107,6 +127,7 @@ export class Tts {
         }
         const req = new TtsSpeakRequest()
         req.setText(text)
+        req.setSpeakerId(speaker_id || this.defaultSpeakerId)
         const stream=this.client.speakStream(req)
         return new Promise((resolve, reject) => {
             stream.on("data", async (response : TtsSpeakResponse) => {
@@ -123,7 +144,7 @@ export class Tts {
                     console.log("queue",this.playQueue.length,response.getText())
                     if(option?.silent !== true){
                         this.playQueue.push(oggStream)
-                        if(!this.isPlaying){                        
+                        if(!this.isPlaying){
                             this.playNextInQueue()
                         }
                     }
@@ -149,19 +170,6 @@ export class Tts {
                     reject(err)
                 }else{
                     resolve(response)
-                }
-            })
-        })
-    }
-    setSpeaker(speakerId: number): Promise<void> {
-        return new Promise((resolve, reject) => {
-            const req = new TtsSpeakerSelect()
-            req.setIndex(speakerId)
-            this.client.setSpeaker(req, (err, response) => {
-                if(err){
-                    reject(err)
-                }else{
-                    resolve()
                 }
             })
         })

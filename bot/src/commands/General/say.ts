@@ -1,9 +1,10 @@
 import { Category } from "@discordx/utilities"
-import { ApplicationCommandOptionType, CommandInteraction, GuildMember, Message } from "discord.js"
+import { ApplicationCommandOptionType, CommandInteraction, GuildMember, Message, VoiceChannel } from "discord.js"
 import { Client, SlashChoice, SlashOption } from "discordx"
 import { resolveDependency, simpleErrorEmbed, simpleSuccessEmbed } from "@utils/functions"
 import { Discord, Slash } from "@decorators"
 import { Tts } from "../../services/Tts"
+import { VoiceChat } from "@services"
 
 @Discord()
 @Category('General')
@@ -17,6 +18,7 @@ export default class SayCommand {
 		@SlashOption({ name: 'text', type: ApplicationCommandOptionType.String, required: true,description: "なんか言わせたいこと" }) text: string,
 		@SlashOption({ name: 'count', type: ApplicationCommandOptionType.Integer, required: false,description: "何回言わせるか(1-10)" }) count: number,
 		@SlashOption({ name: '名前呼びチェック', type: ApplicationCommandOptionType.Mentionable,description: "対象者の名前を呼ぶ",required: false }) target_member: GuildMember,
+		@SlashOption({ name: 'speaker_id', type: ApplicationCommandOptionType.Integer,description: "SpeakerId",required: false }) speaker_id: number,
 		interaction: CommandInteraction,
 		client: Client,
 		{ localize }: InteractionData
@@ -41,10 +43,32 @@ export default class SayCommand {
 			return
 		}
 		const tts=await resolveDependency(Tts)
+		const list = await tts.getSpeakersInfo()
+		if(list.getSpeakersList().length  > speaker_id){
+			simpleErrorEmbed(
+				interaction,
+				`SpeakerIdが不正です`
+			)
+			return
+		}
+		const member = interaction.member as GuildMember
+		const current_channel = member.voice.channel as VoiceChannel
+		const voiceChat = await resolveDependency(VoiceChat)
+
+		if(!current_channel){
+			simpleErrorEmbed(
+				interaction,
+				`ボイスチャンネルに入っていません`
+			)
+			return
+		}
+		await voiceChat.join(current_channel)
+		
+
 		if(!count || count < 1) count=1
 		if(count>10) count=10
 		const repeat = async (text: string, count: number,initial_count: number) => {
-			await tts.speak(text,{useCache: initial_count != 1, imediate: count == initial_count})
+			await tts.speak(text,speaker_id,{useCache: initial_count != 1, imediate: count == initial_count})
 			if(count>1) await repeat(text, count-1,initial_count)
 		}
 		try {
@@ -57,6 +81,7 @@ export default class SayCommand {
 				interaction,
 				`言いました ${count}回`
 			)
+			await voiceChat.leave()
 		}catch( err: any ){
 			if(err == "yet join voice channel"){
 				simpleErrorEmbed(

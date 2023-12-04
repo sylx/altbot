@@ -76,7 +76,7 @@ export default class TranscribeCommand {
 
 		//キャッシュ生成
 		const funcs=[...doui,...aizuchi,...shazai,...sokushin].map((text)=>{
-			return ()=>tts.speak(text,{useCache: true,silent: true})
+			return ()=>tts.speak(text,null,{useCache: true,silent: true})
 		}) as Array<()=>Promise<void>>
 		for(let f of funcs){
 			await f()
@@ -88,7 +88,7 @@ export default class TranscribeCommand {
 			})
 			if(data.speaker_id === listenTo?.id){
 				let aiz = aizuchi[Math.floor(Math.random()*aizuchi.length)]
-				tts.speak(aiz,{useCache: true})
+				tts.speak(aiz,null,{useCache: true})
 			}
 		})
 
@@ -120,7 +120,7 @@ export default class TranscribeCommand {
 					aiz = shazai[Math.floor(Math.random()*shazai.length)]
 				}
 				if(aiz){
-					tts.speak(aiz,{useCache: true,imediate: true})
+					tts.speak(aiz,null,{useCache: true,imediate: true})
 				}
 				const toUpdateIndex = listenText.findIndex(item=>item.packet_timestamp === data.packet_timestamp)
 				if(toUpdateIndex > -1){
@@ -133,7 +133,7 @@ export default class TranscribeCommand {
 						listenTo=null
 						const question = listenText.map(data=>data.text).join("、")
 						listenText=[]
-						tts.speak("うーんちょっと待って。整理するね。どうなんだろね。それは",{useCache: true,imediate: true})
+						tts.speak("うーんちょっと待って。整理するね。どうなんだろね。それは",null,{useCache: true,imediate: true})
 						voiceLog.appendLog({
 							id: [Date.now(),data.speaker_id].join("_"),
 							timestamp: data.begin,
@@ -151,7 +151,7 @@ export default class TranscribeCommand {
 							text: reply_text,
 							written: undefined
 						})
-						await tts.speak(reply_text,{imediate: true})
+						await tts.speak(reply_text,null,{imediate: true})
 
 						const prize_point = Math.floor(Math.pow((result.hostile_score - 5),(result.hostile_score > 5 ? 2.5 : 2)) * (result.hostile_score > 5 ? 1 : -1))
 						let prize_text = ""

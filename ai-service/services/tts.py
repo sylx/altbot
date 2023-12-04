@@ -65,10 +65,9 @@ class TtsMoeGoeBackend():
             emotion_embedding=emotion_embedding,
             **self.hps_ms.model).to(dev)
         _ = self.net_g_ms.eval()
-        self.speaker_id = 24
         utils.load_checkpoint(model, self.net_g_ms)
     
-    def generateSpeech(self,text):
+    def generateSpeech(self,text,speaker_id=1):
         length_scale, text = get_label_value(text, 'LENGTH', 1, 'length scale')
         noise_scale, text = get_label_value(text, 'NOISE', 0.667, 'noise scale')
         noise_scale_w, text = get_label_value(text, 'NOISEW', 0.8, 'deviation of noise')
@@ -77,7 +76,7 @@ class TtsMoeGoeBackend():
         with no_grad():
             x_tst = stn_tst.unsqueeze(0).to(dev)
             x_tst_lengths = LongTensor([stn_tst.size(0)]).to(dev)
-            sid = LongTensor([self.speaker_id]).to(dev)
+            sid = LongTensor([speaker_id]).to(dev)
             # black magic
             audio = self.net_g_ms.infer(x_tst, x_tst_lengths, sid=sid, noise_scale=noise_scale,
                                 noise_scale_w=noise_scale_w, length_scale=length_scale)[0][0, 0].data.cpu().float().numpy()
@@ -96,7 +95,7 @@ class TtsVitsJaProsBackend():
         device="gpu"
         self.model = VITSJaProsModel(model_name, model_path, yaml_file, device=device)
 
-    def generateSpeech(self,text):
+    def generateSpeech(self,text,speaker_id=1):
         speed_scale = 1.0
         pitch_scale = 1.0
         intonation_scale = 1.0
@@ -130,11 +129,12 @@ class Tts(tts_pb2_grpc.TtsServicer):
     async def SpeakStream(self, request, context):
         # リクエストを受け取る        
         wholeText = request.text
+        speaker_id = request.speaker_id - 1
         # 分割する
         sentences = self.splitText(wholeText,20)
         # 音声データを生成する
         for text in sentences:
-            audio = await asyncio.get_running_loop().run_in_executor(self.pool, self.generateSpeech, text,self.lock)
+            audio = await asyncio.get_running_loop().run_in_executor(self.pool, self.generateSpeech, text,speaker_id,self.lock)
             yield tts_pb2.TtsSpeakResponse(audio=audio,text=text)
 
     def splitText(self, wholeText,minLength=10):
@@ -162,12 +162,12 @@ class Tts(tts_pb2_grpc.TtsServicer):
         return ret
 
 
-    def generateSpeech(self,text,lock):
+    def generateSpeech(self,text,speaker_id,lock):
         threading.current_thread().name = "generateSpeech"
         if lock.acquire(blocking=True,timeout=10) == False:
             raise Exception("lock timeout in generateSpeech")
         
-        audio=self.backend.generateSpeech(text)
+        audio=self.backend.generateSpeech(text,speaker_id)
         
 
         # ピッチをGladosぽくする
@@ -199,14 +199,7 @@ class Tts(tts_pb2_grpc.TtsServicer):
 
     def GetSpeakers(self, request, context):
         list = tts_pb2.TtsSpeakerInfoList()
-        for i, speaker in enumerate(self.speakers):
-            list.speakers.append(tts_pb2.TtsSpeakerInfo(index=i+1, name=speaker,selected = i == self.speaker_id))            
+        for i, speaker in enumerate(self.backend.speakers):
+            list.speakers.append(tts_pb2.TtsSpeakerInfo(index=i+1, name=speaker))            
         return list
-    
-    def SetSpeaker(self, request, context):
-        index = request.index - 1
-        if self.speakers[index] is not None:
-            self.speaker_id = index
-        speaker=self.speakers[self.speaker_id]
-        return tts_pb2.TtsSpeakerInfo(index=self.speaker_id+1, name=speaker,selected = True)
-        
+            
