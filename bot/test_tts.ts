@@ -12,7 +12,7 @@ const encoder = new OpusEncoder(48000, 2);
 
 async function main(){
     const client = new TtsClient(
-        "localhost:1234",
+        `${process.env.AI_SERVICE_HOST}:${process.env.AI_SERVICE_PORT}`,
         grpc.credentials.createInsecure()
     )
     await new Promise((resolve, reject) => {

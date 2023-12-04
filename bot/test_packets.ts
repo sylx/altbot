@@ -9,9 +9,9 @@ import prism from "prism-media"
 import { Readable, Stream } from "node:stream"
 
 const encoder = new OpusEncoder(48000, 2);  
- 
+
 const client = new TranscriptionClient(
-    "localhost:1234",
+    `${process.env.AI_SERVICE_HOST}:${process.env.AI_SERVICE_PORT}`,
     grpc.credentials.createInsecure()
 )
 

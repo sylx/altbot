@@ -131,38 +131,19 @@ export default class InfoCommand {
 				} else return null
 			})
 			.filter(link => link) as ButtonBuilder[]
-		const select = new StringSelectMenuBuilder()
-			.setCustomId('speaker_id')
-			.setPlaceholder('声の選択')
-		const tts = await resolveDependency(Tts)
-		const list = await tts.getSpeakersInfo()
-		list.getSpeakersList().forEach((speaker,i) => {
-			//25個までしか選択肢に入れられない
-			if(i >= 25) return false
-			select.addOptions(
-				new StringSelectMenuOptionBuilder()
-					.setLabel(speaker.getName())
-					.setValue(String(speaker.getIndex()))
-					.setDefault(speaker.getSelected() ? true : false)
-			)
-		})
 
 		const row = new ActionRowBuilder<ButtonBuilder>()
 			.addComponents(...buttons)
-		const row2 = new ActionRowBuilder<StringSelectMenuBuilder>()
-			.addComponents(select)
 		
 		// finally send the embed
 		const res=await interaction.followUp({
 			embeds: [embed],
-			components: [row2,row],
+			components: [row],
 		})
 		const collector = res.createMessageComponentCollector({ componentType: ComponentType.StringSelect, time: 3600_000 });
 		collector.on('collect', async i => {
 			const selection = i.values[0];
-			await tts.setSpeaker(Number(selection))
 			await i.reply(`${i.user} 声を変更したよ`);
-			await tts.speak("声を変更したよ")
 		})
 
 	}
