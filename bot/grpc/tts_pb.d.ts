@@ -10,6 +10,8 @@ import * as google_protobuf_empty_pb from "google-protobuf/google/protobuf/empty
 export class TtsSpeakRequest extends jspb.Message { 
     getText(): string;
     setText(value: string): TtsSpeakRequest;
+    getSpeakerId(): number;
+    setSpeakerId(value: number): TtsSpeakRequest;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): TtsSpeakRequest.AsObject;
@@ -24,6 +26,7 @@ export class TtsSpeakRequest extends jspb.Message {
 export namespace TtsSpeakRequest {
     export type AsObject = {
         text: string,
+        speakerId: number,
     }
 }
 
@@ -79,8 +82,6 @@ export class TtsSpeakerInfo extends jspb.Message {
     setIndex(value: number): TtsSpeakerInfo;
     getName(): string;
     setName(value: string): TtsSpeakerInfo;
-    getSelected(): boolean;
-    setSelected(value: boolean): TtsSpeakerInfo;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): TtsSpeakerInfo.AsObject;
@@ -96,26 +97,5 @@ export namespace TtsSpeakerInfo {
     export type AsObject = {
         index: number,
         name: string,
-        selected: boolean,
-    }
-}
-
-export class TtsSpeakerSelect extends jspb.Message { 
-    getIndex(): number;
-    setIndex(value: number): TtsSpeakerSelect;
-
-    serializeBinary(): Uint8Array;
-    toObject(includeInstance?: boolean): TtsSpeakerSelect.AsObject;
-    static toObject(includeInstance: boolean, msg: TtsSpeakerSelect): TtsSpeakerSelect.AsObject;
-    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
-    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-    static serializeBinaryToWriter(message: TtsSpeakerSelect, writer: jspb.BinaryWriter): void;
-    static deserializeBinary(bytes: Uint8Array): TtsSpeakerSelect;
-    static deserializeBinaryFromReader(message: TtsSpeakerSelect, reader: jspb.BinaryReader): TtsSpeakerSelect;
-}
-
-export namespace TtsSpeakerSelect {
-    export type AsObject = {
-        index: number,
     }
 }

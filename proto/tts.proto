@@ -6,11 +6,11 @@ import "google/protobuf/empty.proto";
 service Tts {
 	rpc SpeakStream (TtsSpeakRequest) returns (stream TtsSpeakResponse);
 	rpc GetSpeakers (google.protobuf.Empty) returns (TtsSpeakerInfoList);
-	rpc SetSpeaker (TtsSpeakerSelect) returns (TtsSpeakerInfo);
 }
 
 message TtsSpeakRequest {
 	string text = 1;
+	int32 speaker_id = 2;
 }
 
 message TtsSpeakResponse {
@@ -24,8 +24,4 @@ message TtsSpeakerInfoList {
 message TtsSpeakerInfo {
 	int32 index = 1;
 	string name = 2;
-	bool selected = 3;
-}
-message TtsSpeakerSelect {
-	int32 index = 1;
 }

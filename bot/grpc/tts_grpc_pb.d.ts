@@ -11,7 +11,6 @@ import * as google_protobuf_empty_pb from "google-protobuf/google/protobuf/empty
 interface ITtsService extends grpc.ServiceDefinition<grpc.UntypedServiceImplementation> {
     speakStream: ITtsService_ISpeakStream;
     getSpeakers: ITtsService_IGetSpeakers;
-    setSpeaker: ITtsService_ISetSpeaker;
 }
 
 interface ITtsService_ISpeakStream extends grpc.MethodDefinition<tts_pb.TtsSpeakRequest, tts_pb.TtsSpeakResponse> {
@@ -32,22 +31,12 @@ interface ITtsService_IGetSpeakers extends grpc.MethodDefinition<google_protobuf
     responseSerialize: grpc.serialize<tts_pb.TtsSpeakerInfoList>;
     responseDeserialize: grpc.deserialize<tts_pb.TtsSpeakerInfoList>;
 }
-interface ITtsService_ISetSpeaker extends grpc.MethodDefinition<tts_pb.TtsSpeakerSelect, tts_pb.TtsSpeakerInfo> {
-    path: "/AiService.Tts/SetSpeaker";
-    requestStream: false;
-    responseStream: false;
-    requestSerialize: grpc.serialize<tts_pb.TtsSpeakerSelect>;
-    requestDeserialize: grpc.deserialize<tts_pb.TtsSpeakerSelect>;
-    responseSerialize: grpc.serialize<tts_pb.TtsSpeakerInfo>;
-    responseDeserialize: grpc.deserialize<tts_pb.TtsSpeakerInfo>;
-}
 
 export const TtsService: ITtsService;
 
 export interface ITtsServer extends grpc.UntypedServiceImplementation {
     speakStream: grpc.handleServerStreamingCall<tts_pb.TtsSpeakRequest, tts_pb.TtsSpeakResponse>;
     getSpeakers: grpc.handleUnaryCall<google_protobuf_empty_pb.Empty, tts_pb.TtsSpeakerInfoList>;
-    setSpeaker: grpc.handleUnaryCall<tts_pb.TtsSpeakerSelect, tts_pb.TtsSpeakerInfo>;
 }
 
 export interface ITtsClient {
@@ -56,9 +45,6 @@ export interface ITtsClient {
     getSpeakers(request: google_protobuf_empty_pb.Empty, callback: (error: grpc.ServiceError | null, response: tts_pb.TtsSpeakerInfoList) => void): grpc.ClientUnaryCall;
     getSpeakers(request: google_protobuf_empty_pb.Empty, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: tts_pb.TtsSpeakerInfoList) => void): grpc.ClientUnaryCall;
     getSpeakers(request: google_protobuf_empty_pb.Empty, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: tts_pb.TtsSpeakerInfoList) => void): grpc.ClientUnaryCall;
-    setSpeaker(request: tts_pb.TtsSpeakerSelect, callback: (error: grpc.ServiceError | null, response: tts_pb.TtsSpeakerInfo) => void): grpc.ClientUnaryCall;
-    setSpeaker(request: tts_pb.TtsSpeakerSelect, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: tts_pb.TtsSpeakerInfo) => void): grpc.ClientUnaryCall;
-    setSpeaker(request: tts_pb.TtsSpeakerSelect, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: tts_pb.TtsSpeakerInfo) => void): grpc.ClientUnaryCall;
 }
 
 export class TtsClient extends grpc.Client implements ITtsClient {
@@ -68,7 +54,4 @@ export class TtsClient extends grpc.Client implements ITtsClient {
     public getSpeakers(request: google_protobuf_empty_pb.Empty, callback: (error: grpc.ServiceError | null, response: tts_pb.TtsSpeakerInfoList) => void): grpc.ClientUnaryCall;
     public getSpeakers(request: google_protobuf_empty_pb.Empty, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: tts_pb.TtsSpeakerInfoList) => void): grpc.ClientUnaryCall;
     public getSpeakers(request: google_protobuf_empty_pb.Empty, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: tts_pb.TtsSpeakerInfoList) => void): grpc.ClientUnaryCall;
-    public setSpeaker(request: tts_pb.TtsSpeakerSelect, callback: (error: grpc.ServiceError | null, response: tts_pb.TtsSpeakerInfo) => void): grpc.ClientUnaryCall;
-    public setSpeaker(request: tts_pb.TtsSpeakerSelect, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: tts_pb.TtsSpeakerInfo) => void): grpc.ClientUnaryCall;
-    public setSpeaker(request: tts_pb.TtsSpeakerSelect, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: tts_pb.TtsSpeakerInfo) => void): grpc.ClientUnaryCall;
 }

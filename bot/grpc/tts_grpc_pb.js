@@ -27,17 +27,6 @@ function deserialize_AiService_TtsSpeakResponse(buffer_arg) {
   return tts_pb.TtsSpeakResponse.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
-function serialize_AiService_TtsSpeakerInfo(arg) {
-  if (!(arg instanceof tts_pb.TtsSpeakerInfo)) {
-    throw new Error('Expected argument of type AiService.TtsSpeakerInfo');
-  }
-  return Buffer.from(arg.serializeBinary());
-}
-
-function deserialize_AiService_TtsSpeakerInfo(buffer_arg) {
-  return tts_pb.TtsSpeakerInfo.deserializeBinary(new Uint8Array(buffer_arg));
-}
-
 function serialize_AiService_TtsSpeakerInfoList(arg) {
   if (!(arg instanceof tts_pb.TtsSpeakerInfoList)) {
     throw new Error('Expected argument of type AiService.TtsSpeakerInfoList');
@@ -47,17 +36,6 @@ function serialize_AiService_TtsSpeakerInfoList(arg) {
 
 function deserialize_AiService_TtsSpeakerInfoList(buffer_arg) {
   return tts_pb.TtsSpeakerInfoList.deserializeBinary(new Uint8Array(buffer_arg));
-}
-
-function serialize_AiService_TtsSpeakerSelect(arg) {
-  if (!(arg instanceof tts_pb.TtsSpeakerSelect)) {
-    throw new Error('Expected argument of type AiService.TtsSpeakerSelect');
-  }
-  return Buffer.from(arg.serializeBinary());
-}
-
-function deserialize_AiService_TtsSpeakerSelect(buffer_arg) {
-  return tts_pb.TtsSpeakerSelect.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
 function serialize_google_protobuf_Empty(arg) {
@@ -94,17 +72,6 @@ var TtsService = exports.TtsService = {
     requestDeserialize: deserialize_google_protobuf_Empty,
     responseSerialize: serialize_AiService_TtsSpeakerInfoList,
     responseDeserialize: deserialize_AiService_TtsSpeakerInfoList,
-  },
-  setSpeaker: {
-    path: '/AiService.Tts/SetSpeaker',
-    requestStream: false,
-    responseStream: false,
-    requestType: tts_pb.TtsSpeakerSelect,
-    responseType: tts_pb.TtsSpeakerInfo,
-    requestSerialize: serialize_AiService_TtsSpeakerSelect,
-    requestDeserialize: deserialize_AiService_TtsSpeakerSelect,
-    responseSerialize: serialize_AiService_TtsSpeakerInfo,
-    responseDeserialize: deserialize_AiService_TtsSpeakerInfo,
   },
 };
 
