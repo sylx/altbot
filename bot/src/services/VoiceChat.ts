@@ -1,33 +1,44 @@
 
-import { delay, inject, singleton } from "tsyringe"
+import { Lifecycle, delay, inject, injectable, scoped } from "tsyringe"
 
 import {
-    VoiceConnection, createAudioPlayer,AudioPlayer,
-    createAudioResource, StreamType,joinVoiceChannel,
-    VoiceConnectionStatus, entersState,
-    AudioPlayerStatus, getVoiceConnections,
+    VoiceConnection, createAudioPlayer, AudioPlayer, joinVoiceChannel,
+    VoiceConnectionStatus, entersState
 } from "@discordjs/voice"
 
-import { GuildMember, VoiceChannel } from "discord.js"
+import { VoiceChannel } from "discord.js"
 import { Client } from "discordx"
 
 import { EventEmitter } from "events"
-import { Transcription } from "./Transcription"
+import { IGuildDependent, resolveDependencyPerGuild } from "@utils/functions"
 
-@singleton()
-export class VoiceChat {
+import {Tts} from "./Tts"
+
+@scoped(Lifecycle.ContainerScoped)
+@injectable()
+export class VoiceChat implements IGuildDependent{
     connection : VoiceConnection | null = null
     channel : VoiceChannel | null = null
     emitter: EventEmitter = new EventEmitter()
     player : AudioPlayer = createAudioPlayer({
         debug: true
     })
+    protected guildId: string | null = null
     constructor(
         @inject(delay(() => Client)) private client: Client,
+        @inject(delay(() => Tts)) protected tts: Tts,
     ) {
         process.on("exit", async () => {
             await this.leave()
         })
+    }
+
+    setGuildId(id: string): void {
+        this.guildId = id
+    }
+
+    getTts() : Tts{
+        return this.tts
     }
 
     getConnection() : VoiceConnection | null{

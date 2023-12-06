@@ -3,7 +3,7 @@ import { Client } from "discordx"
 
 import { Discord, Guard, Slash, SlashOption } from "@decorators"
 import { Disabled } from "@guards"
-import { simpleSuccessEmbed } from "@utils/functions"
+import { resolveDependencyPerGuild, simpleSuccessEmbed } from "@utils/functions"
 
 import { Data } from "@entities"
 import { Database } from "@services"
@@ -27,9 +27,10 @@ export default class JoinCommand {
 		client: Client,
 		{ localize }: InteractionData
 	) {
+		if(interaction.guildId === null) return
 		const db = await resolveDependency(Database)
-		const voiceChat = await resolveDependency(VoiceChat)
-		const tts = await resolveDependency(Tts)
+		const voiceChat = await resolveDependencyPerGuild(VoiceChat, interaction.guildId)
+		const tts = voiceChat.getTts()
 		const dataRepository = db.get(Data)
 
 		await voiceChat.join(channel)
@@ -49,17 +50,15 @@ export default class JoinCommand {
 
 export async function joinLastChannel(client : Client) {
 	const db = await resolveDependency(Database)
-	const voiceChat = await resolveDependency(VoiceChat)
-	const tts = await resolveDependency(Tts)
 	const dataRepository = db.get(Data)
 	const channId = await dataRepository.get('lastVoiceChannel')
 
 	if (channId) {
-		await voiceChat.leave()
 		const guild = client.guilds.cache.get(channId.guildId)
 		if(guild){
+			const voiceChat = await resolveDependencyPerGuild(VoiceChat, guild.id)
 			await voiceChat.join(guild.channels.cache.get(channId.channelId) as VoiceChannel)
-			await tts.speak("ただいま")
+			await voiceChat.getTts().speak("ただいま")
 		}
 	}
 	

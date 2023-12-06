@@ -3,7 +3,7 @@ import { Guard } from "@guards"
 import { injectable } from "tsyringe"
 import { Category } from "@discordx/utilities"
 import { CommandInteraction, Client, GuildMember, ChannelType, Collection, ApplicationCommandOptionType,  VoiceChannel } from "discord.js"
-import { resolveDependency, simpleErrorEmbed, simpleSuccessEmbed } from "@utils/functions"
+import { resolveDependency, resolveDependencyPerGuild, simpleErrorEmbed, simpleSuccessEmbed } from "@utils/functions"
 import { Gpt, Tts, VoiceChat } from "@services"
 
 let excuting=false
@@ -36,11 +36,12 @@ export default class OgiriCommand {
         }
         excuting=true
 
+        if(interaction.guildId == null) return
         // 呼び出したメンバーの入っているチャンネルを取得
         const member = interaction.member as GuildMember
         const current_channel = member.voice.channel as VoiceChannel
-		const voiceChat = await resolveDependency(VoiceChat)
-        const tts = await resolveDependency(Tts)
+		const voiceChat = await resolveDependencyPerGuild(VoiceChat,interaction.guildId)
+        const tts = voiceChat.getTts()
         const gpt = await resolveDependency(Gpt)
         
         if(!current_channel){

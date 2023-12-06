@@ -3,7 +3,7 @@ import { Guard } from "@guards"
 import { injectable } from "tsyringe"
 import { Category } from "@discordx/utilities"
 import { CommandInteraction, Client, GuildMember, ChannelType, Collection, ApplicationCommandOptionType,  VoiceChannel, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Message, ComponentType } from "discord.js"
-import { resolveDependency, simpleErrorEmbed, simpleSuccessEmbed } from "@utils/functions"
+import { resolveDependency, resolveDependencyPerGuild, simpleErrorEmbed, simpleSuccessEmbed } from "@utils/functions"
 import { Gpt, QuestionAssistantData, QuestionUserData, QuetionSessionData, Transcription, Tts, VoiceChat } from "@services"
 import { EventEmitter } from "events"
 
@@ -37,12 +37,13 @@ export default class QuestionCommand {
         }
         excuting=true
 
+        if(interaction.guildId == null) return
         // 呼び出したメンバーの入っているチャンネルを取得
         const member = interaction.member as GuildMember
         const current_channel = member.voice.channel as VoiceChannel
-		const voiceChat = await resolveDependency(VoiceChat)
+		const voiceChat = await resolveDependencyPerGuild(VoiceChat,interaction.guildId)
         const transcription = await resolveDependency(Transcription)
-        const tts = await resolveDependency(Tts)
+        const tts = voiceChat.getTts()
         const gpt = await resolveDependency(Gpt)
         
         if(!current_channel){

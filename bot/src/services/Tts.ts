@@ -1,6 +1,6 @@
 
 import * as grpc from "@grpc/grpc-js"
-import { delay, inject, singleton,injectable } from "tsyringe"
+import { delay, inject, injectable, scoped, Lifecycle } from "tsyringe"
 import { TtsClient } from "../../grpc/tts_grpc_pb"
 
 import {
@@ -23,9 +23,9 @@ interface TtsSpeakOptions {
 }
 
 
-@singleton()
+@scoped(Lifecycle.ContainerScoped)
 @injectable()
-export class Tts {
+export class Tts{
     public client : TtsClient
     public playQueue : Array<Readable> = []
     protected isPlaying : boolean = false

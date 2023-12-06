@@ -1,7 +1,7 @@
 import { Category } from "@discordx/utilities"
 import { ApplicationCommandOptionType, CommandInteraction, GuildMember, Message, VoiceChannel } from "discord.js"
 import { Client, SlashChoice, SlashOption } from "discordx"
-import { resolveDependency, simpleErrorEmbed, simpleSuccessEmbed } from "@utils/functions"
+import { resolveDependency, resolveDependencyPerGuild, simpleErrorEmbed, simpleSuccessEmbed } from "@utils/functions"
 import { Discord, Slash } from "@decorators"
 import { Tts } from "../../services/Tts"
 import { VoiceChat } from "@services"
@@ -42,7 +42,9 @@ export default class SayCommand {
 			)
 			return
 		}
-		const tts=await resolveDependency(Tts)
+		if(interaction.guildId === null) return
+		const voiceChat = await resolveDependencyPerGuild(VoiceChat, interaction.guildId)
+		const tts=voiceChat.getTts()
 		const list = await tts.getSpeakersInfo()
 		if(list.getSpeakersList().length  > speaker_id){
 			simpleErrorEmbed(
@@ -53,7 +55,7 @@ export default class SayCommand {
 		}
 		const member = interaction.member as GuildMember
 		const current_channel = member.voice.channel as VoiceChannel
-		const voiceChat = await resolveDependency(VoiceChat)
+
 
 		if(!current_channel){
 			simpleErrorEmbed(

@@ -3,13 +3,14 @@ import type { CommandInteraction, Message } from "discord.js"
 import { Client } from "discordx"
 
 import { Discord, Slash } from "@decorators"
-import { simpleSuccessEmbed } from "@utils/functions"
+import { resolveDependencyPerGuild, simpleSuccessEmbed } from "@utils/functions"
 
 
 import { Data } from "@entities"
 import { Database } from "@services"
 import { resolveDependency } from "@utils/functions"
 import { VoiceChat } from "../../services/VoiceChat"
+import { I } from "ts-toolbelt"
 
 @Discord()
 @Category('General')
@@ -23,8 +24,9 @@ export default class LeaveCommand {
 		client: Client,
 		{ localize }: InteractionData
 	) {
+		if(interaction.guildId === null) return
 		const db = await resolveDependency(Database)
-		const voiceChat = await resolveDependency(VoiceChat)
+		const voiceChat = await resolveDependencyPerGuild(VoiceChat, interaction.guildId)
 		const dataRepository = db.get(Data)
 		await dataRepository.set('lastVoiceChannel', null)
 		await voiceChat.leave()

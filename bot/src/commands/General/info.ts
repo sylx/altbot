@@ -12,7 +12,7 @@ import { generalConfig } from "@config"
 import { Discord, Slash } from "@decorators"
 import { Guard } from "@guards"
 import { Stats, VoiceChat } from "@services"
-import { getColor, isValidUrl, timeAgo } from "@utils/functions"
+import { getColor, isValidUrl, resolveDependencyPerGuild, timeAgo } from "@utils/functions"
 
 import packageJSON from "../../../package.json"
 import { resolveDependency } from "@utils/functions"
@@ -166,14 +166,15 @@ export default class InfoCommand {
 
 			const member = interaction.member as GuildMember
 			const current_channel = member.voice.channel as VoiceChannel
-			const voiceChat = await resolveDependency(VoiceChat)
-
-			await voiceChat.join(current_channel)
 			const selection = i.values[0];
 			tts.setDefaultSpeakerId(parseInt(selection))
-			await i.reply(`${i.user} 声を変更したよ`)
-			await tts.speak("声を変更したよ")
-			await voiceChat.leave()
+			if(interaction.guildId !== null){
+				const voiceChat = await resolveDependencyPerGuild(VoiceChat,interaction.guildId)
+				await voiceChat.join(current_channel)
+				await i.reply(`${i.user} 声を変更したよ`)
+				await voiceChat.getTts().speak("声を変更したよ")
+				await voiceChat.leave()
+			}	
 		})
 
 	}
