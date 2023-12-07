@@ -1,5 +1,5 @@
 
-import { Lifecycle, delay, inject, injectable, scoped } from "tsyringe"
+import { delay, inject } from "tsyringe"
 
 import {
     VoiceConnection, createAudioPlayer, AudioPlayer, joinVoiceChannel,
@@ -10,35 +10,26 @@ import { VoiceChannel } from "discord.js"
 import { Client } from "discordx"
 
 import { EventEmitter } from "events"
-import { IGuildDependent, resolveDependencyPerGuild } from "@utils/functions"
+import { IGuildDependent, guildScoped } from "@utils/functions"
 
-import {Tts} from "./Tts"
-
-@scoped(Lifecycle.ContainerScoped)
-@injectable()
+@guildScoped()
 export class VoiceChat implements IGuildDependent{
-    connection : VoiceConnection | null = null
-    channel : VoiceChannel | null = null
-    emitter: EventEmitter = new EventEmitter()
-    player : AudioPlayer = createAudioPlayer({
+    protected connection : VoiceConnection | null = null
+    protected channel : VoiceChannel | null = null
+    protected emitter: EventEmitter = new EventEmitter()
+    protected player : AudioPlayer = createAudioPlayer({
         debug: true
     })
-    protected guildId: string | null = null
     constructor(
         @inject(delay(() => Client)) private client: Client,
-        @inject(delay(() => Tts)) protected tts: Tts,
     ) {
         process.on("exit", async () => {
             await this.leave()
         })
     }
 
-    setGuildId(id: string): void {
-        this.guildId = id
-    }
-
-    getTts() : Tts{
-        return this.tts
+    getGuildId() : string | null{
+        return this.connection?.joinConfig.guildId ?? null
     }
 
     getConnection() : VoiceConnection | null{

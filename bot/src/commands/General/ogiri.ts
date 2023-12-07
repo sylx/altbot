@@ -1,8 +1,8 @@
-import { Discord, Slash,SlashOption,SlashGroup } from "@decorators"
+import { Discord, Slash, SlashOption } from "@decorators"
 import { Guard } from "@guards"
 import { injectable } from "tsyringe"
 import { Category } from "@discordx/utilities"
-import { CommandInteraction, Client, GuildMember, ChannelType, Collection, ApplicationCommandOptionType,  VoiceChannel } from "discord.js"
+import { CommandInteraction, Client, GuildMember, ApplicationCommandOptionType, VoiceChannel } from "discord.js"
 import { resolveDependency, resolveDependencyPerGuild, simpleErrorEmbed, simpleSuccessEmbed } from "@utils/functions"
 import { Gpt, Tts, VoiceChat } from "@services"
 
@@ -41,7 +41,7 @@ export default class OgiriCommand {
         const member = interaction.member as GuildMember
         const current_channel = member.voice.channel as VoiceChannel
 		const voiceChat = await resolveDependencyPerGuild(VoiceChat,interaction.guildId)
-        const tts = voiceChat.getTts()
+        const tts =await resolveDependencyPerGuild(Tts,interaction.guildId)
         const gpt = await resolveDependency(Gpt)
         
         if(!current_channel){

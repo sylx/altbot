@@ -43,7 +43,7 @@ export default class QuestionCommand {
         const current_channel = member.voice.channel as VoiceChannel
 		const voiceChat = await resolveDependencyPerGuild(VoiceChat,interaction.guildId)
         const transcription = await resolveDependency(Transcription)
-        const tts = voiceChat.getTts()
+        const tts =await resolveDependencyPerGuild(Tts,interaction.guildId)
         const gpt = await resolveDependency(Gpt)
         
         if(!current_channel){

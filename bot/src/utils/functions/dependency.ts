@@ -1,10 +1,9 @@
 import assert from "assert";
-import exp from "constants"
-import { F } from "ts-toolbelt"
-import { container, InjectionToken } from "tsyringe"
+import { F } from "ts-toolbelt";
+import { container, injectable, InjectionToken, Lifecycle, scoped } from "tsyringe";
 
 export interface IGuildDependent {
-    setGuildId(id: string): void;
+    getGuildId(): string | null
 }
 
 export const resolveDependency = async <T>(token: InjectionToken<T>, interval: number = 500): Promise<T> => {
@@ -14,14 +13,15 @@ export const resolveDependency = async <T>(token: InjectionToken<T>, interval: n
     }
 
     const instance = container.resolve(token)
-    //instanceがIGuildDependentを実装していたらエラー
-    assert(!(instance instanceof Object && 'setGuildId' in instance))
+    //instanceがIGuildDependentを実装していた場合、resolveDependencyPerGuildを使用すべきだが、TSの型システムでは検知できないので、assertで弾く
+    assert(!(instance instanceof Object && 'getGuildId' in instance),
+    `Instance you created implements IGuildDependent,you should use resolveDependencyPerGuild`)
     return instance
 }
 
 const containerPerGuild = new Map<string, typeof container>()
 
-export const resolveDependencyPerGuild = async <T extends IGuildDependent>(token: InjectionToken<T>, guildId: string, interval: number = 500): Promise<T> => {
+export const resolveDependencyPerGuild = async <T>(token: InjectionToken<T & IGuildDependent>, guildId: string, interval: number = 500): Promise<T & IGuildDependent> => {
 
     if (!containerPerGuild.has(guildId)) {
         containerPerGuild.set(guildId, container.createChildContainer())
@@ -33,8 +33,7 @@ export const resolveDependencyPerGuild = async <T extends IGuildDependent>(token
         await new Promise(resolve => setTimeout(resolve, interval))
     }
 
-    const instance=childContainer.resolve(token)
-    instance.setGuildId(guildId)
+    const instance = childContainer.resolve(token)
     return instance
 }
 
@@ -53,3 +52,14 @@ export const resolveDependenciesPerGuild = async <T extends readonly [...unknown
         resolveDependencyPerGuild(token, guildId)
     )) as Promise<Forward<F.Narrow<T>>>
 }
+
+// ギルド別のコンポーネントであることを示すデコレーター
+export function guildScoped() {
+    // injectableとscopedを組み合わせる
+    return (target: any) => {
+        injectable()(target); // コンポーネントとして登録する
+        scoped(Lifecycle.ContainerScoped)(target); // コンテナごとにインスタンスを生成する
+        return target
+    };
+  }
+  

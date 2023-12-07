@@ -1,8 +1,8 @@
-import { ApplicationCommandOptionType, Channel, CommandInteraction, VoiceChannel, ClientVoiceManager, Snowflake, ChannelType } from "discord.js"
+import { ApplicationCommandOptionType, CommandInteraction, VoiceChannel, ChannelType } from "discord.js"
 import { Client } from "discordx"
 
 import { Discord, Guard, Slash, SlashOption } from "@decorators"
-import { Disabled } from "@guards"
+import { GuildOnly } from "@guards"
 import { resolveDependencyPerGuild, simpleSuccessEmbed } from "@utils/functions"
 
 import { Data } from "@entities"
@@ -19,7 +19,7 @@ export default class JoinCommand {
 		name: 'join'
 	})
 	@Guard(
-		Disabled
+		GuildOnly
 	)
 	async join(
 		@SlashOption({ name: 'channel', type: ApplicationCommandOptionType.Channel, channelTypes: [ChannelType.GuildVoice], required: true }) channel: VoiceChannel,
@@ -30,7 +30,7 @@ export default class JoinCommand {
 		if(interaction.guildId === null) return
 		const db = await resolveDependency(Database)
 		const voiceChat = await resolveDependencyPerGuild(VoiceChat, interaction.guildId)
-		const tts = voiceChat.getTts()
+		const tts =await resolveDependencyPerGuild(Tts,interaction.guildId)
 		const dataRepository = db.get(Data)
 
 		await voiceChat.join(channel)
@@ -57,8 +57,9 @@ export async function joinLastChannel(client : Client) {
 		const guild = client.guilds.cache.get(channId.guildId)
 		if(guild){
 			const voiceChat = await resolveDependencyPerGuild(VoiceChat, guild.id)
+			const tts = await resolveDependencyPerGuild(Tts, guild.id)
 			await voiceChat.join(guild.channels.cache.get(channId.channelId) as VoiceChannel)
-			await voiceChat.getTts().speak("ただいま")
+			await tts.speak("ただいま")
 		}
 	}
 	

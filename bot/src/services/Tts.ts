@@ -15,6 +15,7 @@ import * as google_protobuf_empty_pb from "google-protobuf/google/protobuf/empty
 import { Readable } from "stream"
 import { VoiceChat,Database } from "@services"
 import { Data } from "@entities"
+import { IGuildDependent, guildScoped } from "@utils/functions"
 
 interface TtsSpeakOptions {
     useCache?: boolean,
@@ -22,10 +23,8 @@ interface TtsSpeakOptions {
     imediate?: boolean
 }
 
-
-@scoped(Lifecycle.ContainerScoped)
-@injectable()
-export class Tts{
+@guildScoped()
+export class Tts implements IGuildDependent{
     public client : TtsClient
     public playQueue : Array<Readable> = []
     protected isPlaying : boolean = false
@@ -60,6 +59,10 @@ export class Tts{
                 }
             })
         })
+    }
+
+    getGuildId(): string | null {
+        return this.voiceChat.getGuildId()
     }
 
     getClient(): TtsClient {

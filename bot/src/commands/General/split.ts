@@ -32,7 +32,7 @@ export default class SplitCommand {
         const member = interaction.member as GuildMember
         const current_channel = member.voice.channel as VoiceChannel
 		const voiceChat = await resolveDependencyPerGuild(VoiceChat,interaction.guildId)
-        const tts = voiceChat.getTts()
+        const tts =await resolveDependencyPerGuild(Tts,interaction.guildId)
         
         if(!current_channel){
             simpleErrorEmbed(

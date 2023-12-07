@@ -10,7 +10,7 @@ dayjs.extend(relativeTime)
 
 import { generalConfig } from "@config"
 import { Discord, Slash } from "@decorators"
-import { Guard } from "@guards"
+import { Guard, GuildOnly } from "@guards"
 import { Stats, VoiceChat } from "@services"
 import { getColor, isValidUrl, resolveDependencyPerGuild, timeAgo } from "@utils/functions"
 
@@ -37,7 +37,9 @@ export default class InfoCommand {
 		name: 'info',
 		description: 'Botのひみつを表示します'
 	})
-	@Guard()
+	@Guard(
+		GuildOnly
+	)
 	async info(
 		interaction: CommandInteraction,
 		client: Client,
@@ -170,9 +172,10 @@ export default class InfoCommand {
 			tts.setDefaultSpeakerId(parseInt(selection))
 			if(interaction.guildId !== null){
 				const voiceChat = await resolveDependencyPerGuild(VoiceChat,interaction.guildId)
+				const tts = await resolveDependencyPerGuild(Tts,interaction.guildId)
 				await voiceChat.join(current_channel)
 				await i.reply(`${i.user} 声を変更したよ`)
-				await voiceChat.getTts().speak("声を変更したよ")
+				await tts.speak("声を変更したよ")
 				await voiceChat.leave()
 			}	
 		})
