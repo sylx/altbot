@@ -8,11 +8,13 @@ import io
 
 import tts_pb2
 import tts_pb2_grpc
+import re
 
 dev = "cuda:0"
 import asyncio
 import threading
 
+from libs.english_to_kana import EnglishToKana
 from libs.reverb import SchroederReverb
 
 from scipy.signal import butter, lfilter
@@ -116,6 +118,7 @@ class Tts(tts_pb2_grpc.TtsServicer):
         self.pool = pool
         self.backend = TtsMoeGoeBackend()
         #self.backend = TtsVitsJaProsBackend()
+        self.e2k = EnglishToKana()        
         # reverb
         self.schroeder_reverb = SchroederReverb(
             24000,
@@ -129,6 +132,9 @@ class Tts(tts_pb2_grpc.TtsServicer):
     async def SpeakStream(self, request, context):
         # リクエストを受け取る        
         wholeText = request.text
+        # alphabetをカタカナに変換する
+        wholeText=re.sub(r'[a-zA-Z]+', lambda m: self.e2k.convert(m.group(),True), wholeText)
+        
         speaker_id = request.speaker_id - 1
         # 分割する
         sentences = self.splitText(wholeText,20)

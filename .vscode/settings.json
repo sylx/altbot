@@ -1,3 +1,4 @@
 {
-    "python.analysis.extraPaths": ["MoeGoe"]
+    "python.analysis.extraPaths": ["MoeGoe"],
+    "python.defaultInterpreterPath": "${workspaceFolder}/ai-service/venv/bin/python"
 }

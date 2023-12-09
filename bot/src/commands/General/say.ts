@@ -44,9 +44,9 @@ export default class SayCommand {
 		}
 		if(interaction.guildId === null) return
 		const voiceChat = await resolveDependencyPerGuild(VoiceChat, interaction.guildId)
-		const tts=voiceChat.getTts()
+		const tts= await resolveDependencyPerGuild(Tts, interaction.guildId)
 		const list = await tts.getSpeakersInfo()
-		if(list.getSpeakersList().length  > speaker_id){
+		if(speaker_id && list.getSpeakersList().map(s=>s.getIndex()).includes(speaker_id) == false){
 			simpleErrorEmbed(
 				interaction,
 				`SpeakerIdが不正です`
