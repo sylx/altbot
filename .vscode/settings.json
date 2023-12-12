@@ -1,4 +1,5 @@
 {
     "python.analysis.extraPaths": ["MoeGoe"],
-    "python.defaultInterpreterPath": "${workspaceFolder}/ai-service/venv/bin/python"
+    "python.defaultInterpreterPath": "${workspaceFolder}/ai-service/venv/bin/python",
+    "jupyter.debugJustMyCode": false,
 }
