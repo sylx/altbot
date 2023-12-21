@@ -3,6 +3,7 @@ package AiService;
 
 service Transcription {
 	rpc TranscriptionBiStreams (stream DiscordOpusPacketList) returns (stream TranscriptionEvent);
+	rpc KeywordSpotting (stream KeywordSpottingRequest) returns (stream KeywordSpottingFound);
 }
 
 message DiscordOpusPacket {
@@ -22,3 +23,30 @@ message TranscriptionEvent {
 	string eventData = 2;
 	bytes opusData = 3;
 }
+
+message KeywordSpottingRequestConfig {
+	repeated string keyword = 1;
+}
+
+message KeywordSpottingRequestAudio {
+	bytes data = 1;
+	string speaker_id = 2;	
+}
+
+message KeywordSpottingRequest {
+	oneof request_oneof {
+		KeywordSpottingRequestConfig config = 1;
+		KeywordSpottingRequestAudio audio = 2;
+	}
+}
+
+message KeywordSpottingFound {
+	string keyword = 1;
+	float probability = 2;
+	string speaker_id = 3;	
+}
+
+message KeywordSpottingResponse {
+	repeated KeywordSpottingFound found = 1;
+}
+

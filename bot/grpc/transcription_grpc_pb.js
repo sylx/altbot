@@ -15,6 +15,28 @@ function deserialize_AiService_DiscordOpusPacketList(buffer_arg) {
   return transcription_pb.DiscordOpusPacketList.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
+function serialize_AiService_KeywordSpottingFound(arg) {
+  if (!(arg instanceof transcription_pb.KeywordSpottingFound)) {
+    throw new Error('Expected argument of type AiService.KeywordSpottingFound');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_AiService_KeywordSpottingFound(buffer_arg) {
+  return transcription_pb.KeywordSpottingFound.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_AiService_KeywordSpottingRequest(arg) {
+  if (!(arg instanceof transcription_pb.KeywordSpottingRequest)) {
+    throw new Error('Expected argument of type AiService.KeywordSpottingRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_AiService_KeywordSpottingRequest(buffer_arg) {
+  return transcription_pb.KeywordSpottingRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
 function serialize_AiService_TranscriptionEvent(arg) {
   if (!(arg instanceof transcription_pb.TranscriptionEvent)) {
     throw new Error('Expected argument of type AiService.TranscriptionEvent');
@@ -38,6 +60,17 @@ var TranscriptionService = exports.TranscriptionService = {
     requestDeserialize: deserialize_AiService_DiscordOpusPacketList,
     responseSerialize: serialize_AiService_TranscriptionEvent,
     responseDeserialize: deserialize_AiService_TranscriptionEvent,
+  },
+  keywordSpotting: {
+    path: '/AiService.Transcription/KeywordSpotting',
+    requestStream: true,
+    responseStream: true,
+    requestType: transcription_pb.KeywordSpottingRequest,
+    responseType: transcription_pb.KeywordSpottingFound,
+    requestSerialize: serialize_AiService_KeywordSpottingRequest,
+    requestDeserialize: deserialize_AiService_KeywordSpottingRequest,
+    responseSerialize: serialize_AiService_KeywordSpottingFound,
+    responseDeserialize: deserialize_AiService_KeywordSpottingFound,
   },
 };
 
