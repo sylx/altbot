@@ -1,3 +1,6 @@
 [submodule "ai-service/MoeGoe"]
 	path = ai-service/MoeGoe
 	url = git@github.com:sylx/MoeGoe.git
+[submodule "ai-service/Style_Bert_VITS2"]
+	path = ai-service/Style_Bert_VITS2
+	url = git@github.com:sylx/Style-Bert-VITS2.git
