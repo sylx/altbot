@@ -113,12 +113,16 @@ export namespace KeywordSpottingRequestConfig {
 }
 
 export class KeywordSpottingRequestAudio extends jspb.Message { 
-    getData(): Uint8Array | string;
-    getData_asU8(): Uint8Array;
-    getData_asB64(): string;
-    setData(value: Uint8Array | string): KeywordSpottingRequestAudio;
+    clearDataList(): void;
+    getDataList(): Array<Uint8Array | string>;
+    getDataList_asU8(): Array<Uint8Array>;
+    getDataList_asB64(): Array<string>;
+    setDataList(value: Array<Uint8Array | string>): KeywordSpottingRequestAudio;
+    addData(value: Uint8Array | string, index?: number): Uint8Array | string;
     getSpeakerId(): string;
     setSpeakerId(value: string): KeywordSpottingRequestAudio;
+    getTimestamp(): number;
+    setTimestamp(value: number): KeywordSpottingRequestAudio;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): KeywordSpottingRequestAudio.AsObject;
@@ -132,8 +136,9 @@ export class KeywordSpottingRequestAudio extends jspb.Message {
 
 export namespace KeywordSpottingRequestAudio {
     export type AsObject = {
-        data: Uint8Array | string,
+        dataList: Array<Uint8Array | string>,
         speakerId: string,
+        timestamp: number,
     }
 }
 
@@ -148,6 +153,8 @@ export class KeywordSpottingRequest extends jspb.Message {
     clearAudio(): void;
     getAudio(): KeywordSpottingRequestAudio | undefined;
     setAudio(value?: KeywordSpottingRequestAudio): KeywordSpottingRequest;
+    getIsFinal(): boolean;
+    setIsFinal(value: boolean): KeywordSpottingRequest;
 
     getRequestOneofCase(): KeywordSpottingRequest.RequestOneofCase;
 
@@ -165,6 +172,7 @@ export namespace KeywordSpottingRequest {
     export type AsObject = {
         config?: KeywordSpottingRequestConfig.AsObject,
         audio?: KeywordSpottingRequestAudio.AsObject,
+        isFinal: boolean,
     }
 
     export enum RequestOneofCase {
@@ -180,8 +188,6 @@ export class KeywordSpottingFound extends jspb.Message {
     setKeyword(value: string): KeywordSpottingFound;
     getProbability(): number;
     setProbability(value: number): KeywordSpottingFound;
-    getSpeakerId(): string;
-    setSpeakerId(value: string): KeywordSpottingFound;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): KeywordSpottingFound.AsObject;
@@ -197,15 +203,75 @@ export namespace KeywordSpottingFound {
     export type AsObject = {
         keyword: string,
         probability: number,
+    }
+}
+
+export class KeywordSpottingFoundEventResponse extends jspb.Message { 
+    clearFoundList(): void;
+    getFoundList(): Array<KeywordSpottingFound>;
+    setFoundList(value: Array<KeywordSpottingFound>): KeywordSpottingFoundEventResponse;
+    addFound(value?: KeywordSpottingFound, index?: number): KeywordSpottingFound;
+    getSpeakerId(): string;
+    setSpeakerId(value: string): KeywordSpottingFoundEventResponse;
+    getDecoderText(): string;
+    setDecoderText(value: string): KeywordSpottingFoundEventResponse;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): KeywordSpottingFoundEventResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: KeywordSpottingFoundEventResponse): KeywordSpottingFoundEventResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: KeywordSpottingFoundEventResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): KeywordSpottingFoundEventResponse;
+    static deserializeBinaryFromReader(message: KeywordSpottingFoundEventResponse, reader: jspb.BinaryReader): KeywordSpottingFoundEventResponse;
+}
+
+export namespace KeywordSpottingFoundEventResponse {
+    export type AsObject = {
+        foundList: Array<KeywordSpottingFound.AsObject>,
         speakerId: string,
+        decoderText: string,
+    }
+}
+
+export class KeywordSpottingConfigResponse extends jspb.Message { 
+    getSuccess(): boolean;
+    setSuccess(value: boolean): KeywordSpottingConfigResponse;
+    clearKeywordList(): void;
+    getKeywordList(): Array<string>;
+    setKeywordList(value: Array<string>): KeywordSpottingConfigResponse;
+    addKeyword(value: string, index?: number): string;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): KeywordSpottingConfigResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: KeywordSpottingConfigResponse): KeywordSpottingConfigResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: KeywordSpottingConfigResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): KeywordSpottingConfigResponse;
+    static deserializeBinaryFromReader(message: KeywordSpottingConfigResponse, reader: jspb.BinaryReader): KeywordSpottingConfigResponse;
+}
+
+export namespace KeywordSpottingConfigResponse {
+    export type AsObject = {
+        success: boolean,
+        keywordList: Array<string>,
     }
 }
 
 export class KeywordSpottingResponse extends jspb.Message { 
-    clearFoundList(): void;
-    getFoundList(): Array<KeywordSpottingFound>;
-    setFoundList(value: Array<KeywordSpottingFound>): KeywordSpottingResponse;
-    addFound(value?: KeywordSpottingFound, index?: number): KeywordSpottingFound;
+
+    hasFound(): boolean;
+    clearFound(): void;
+    getFound(): KeywordSpottingFoundEventResponse | undefined;
+    setFound(value?: KeywordSpottingFoundEventResponse): KeywordSpottingResponse;
+
+    hasConfig(): boolean;
+    clearConfig(): void;
+    getConfig(): KeywordSpottingConfigResponse | undefined;
+    setConfig(value?: KeywordSpottingConfigResponse): KeywordSpottingResponse;
+
+    getResponseOneofCase(): KeywordSpottingResponse.ResponseOneofCase;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): KeywordSpottingResponse.AsObject;
@@ -219,6 +285,14 @@ export class KeywordSpottingResponse extends jspb.Message {
 
 export namespace KeywordSpottingResponse {
     export type AsObject = {
-        foundList: Array<KeywordSpottingFound.AsObject>,
+        found?: KeywordSpottingFoundEventResponse.AsObject,
+        config?: KeywordSpottingConfigResponse.AsObject,
     }
+
+    export enum ResponseOneofCase {
+        RESPONSE_ONEOF_NOT_SET = 0,
+        FOUND = 1,
+        CONFIG = 2,
+    }
+
 }

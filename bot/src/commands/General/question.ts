@@ -62,7 +62,7 @@ export default class QuestionCommand {
         if(!conn){
             simpleErrorEmbed(
                 interaction,
-                `接続できません`
+                `VCに入れませんでした`
             )
             excuting=false
             return

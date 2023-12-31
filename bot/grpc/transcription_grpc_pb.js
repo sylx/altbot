@@ -15,17 +15,6 @@ function deserialize_AiService_DiscordOpusPacketList(buffer_arg) {
   return transcription_pb.DiscordOpusPacketList.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
-function serialize_AiService_KeywordSpottingFound(arg) {
-  if (!(arg instanceof transcription_pb.KeywordSpottingFound)) {
-    throw new Error('Expected argument of type AiService.KeywordSpottingFound');
-  }
-  return Buffer.from(arg.serializeBinary());
-}
-
-function deserialize_AiService_KeywordSpottingFound(buffer_arg) {
-  return transcription_pb.KeywordSpottingFound.deserializeBinary(new Uint8Array(buffer_arg));
-}
-
 function serialize_AiService_KeywordSpottingRequest(arg) {
   if (!(arg instanceof transcription_pb.KeywordSpottingRequest)) {
     throw new Error('Expected argument of type AiService.KeywordSpottingRequest');
@@ -35,6 +24,17 @@ function serialize_AiService_KeywordSpottingRequest(arg) {
 
 function deserialize_AiService_KeywordSpottingRequest(buffer_arg) {
   return transcription_pb.KeywordSpottingRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_AiService_KeywordSpottingResponse(arg) {
+  if (!(arg instanceof transcription_pb.KeywordSpottingResponse)) {
+    throw new Error('Expected argument of type AiService.KeywordSpottingResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_AiService_KeywordSpottingResponse(buffer_arg) {
+  return transcription_pb.KeywordSpottingResponse.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
 function serialize_AiService_TranscriptionEvent(arg) {
@@ -66,11 +66,11 @@ var TranscriptionService = exports.TranscriptionService = {
     requestStream: true,
     responseStream: true,
     requestType: transcription_pb.KeywordSpottingRequest,
-    responseType: transcription_pb.KeywordSpottingFound,
+    responseType: transcription_pb.KeywordSpottingResponse,
     requestSerialize: serialize_AiService_KeywordSpottingRequest,
     requestDeserialize: deserialize_AiService_KeywordSpottingRequest,
-    responseSerialize: serialize_AiService_KeywordSpottingFound,
-    responseDeserialize: deserialize_AiService_KeywordSpottingFound,
+    responseSerialize: serialize_AiService_KeywordSpottingResponse,
+    responseDeserialize: deserialize_AiService_KeywordSpottingResponse,
   },
 };
 

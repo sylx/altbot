@@ -5,47 +5,68 @@ import soundfile as sf
 import librosa
 import io
 import asyncio
-from pyee import AsyncIOEventEmitter
 
 import transcription_pb2
 import transcription_pb2_grpc
+from transcription_pb2 import KeywordSpottingFound,KeywordSpottingResponse,KeywordSpottingFoundEventResponse,KeywordSpottingConfigResponse
 
 from libs.vad import VAD
+from libs.keyword_spotting import KeywordSpotting
 
 import json
 import threading
 import time
 import functools
 
+import torch
+
+DISCORD_OPUS_PACKETS_SAMPLE_RATE = 48000
+
 class Transcription(transcription_pb2_grpc.TranscriptionServicer):
    
     def __init__(self,pool) -> None:
         super().__init__()
+        self.pool = pool        
+        self.model = None
+        self.keyword_spotting = None
+        # opus decoder
+        self.decoder = Decoder()
+        # 連続音声区間を見つけるためのVAD
+        self.vad = {}
+        self.event_buffer=[]
+        self.lock=threading.Lock()
+
+    def getTranscribeModel(self):
+        if self.model is not None:
+            return self.model
+        
         self.model=WhisperModel(
             "medium",
             device="cuda",
             compute_type="float32",
             download_root="./.model_cache",
         )
-        self.pool = pool
-        self.decoder = Decoder()
-        self.vad = {}
-        self.voiced_frames = {}
-        self.transcribed_history = {}
-        self.min_speech_sec = 1.5
-        self.index = 0
-        self.event_buffer=[]
-        self.lock=threading.Lock()
+        return self.model
+    
+    def getKeywordSpottingInstance(self):
+        if self.keyword_spotting is not None:
+            return self.keyword_spotting
+        print("create KeywordSpotting instance(include big model)...")
+        self.keyword_spotting=KeywordSpotting("./.model_cache",device="cuda:0")
+        return self.keyword_spotting
 
-    def decodePacket(self,packet,vad,is_final=False):
-        pcm = self.decoder.decode(packet.data)
+
+    def decodePacket(self,data,sample_rate=16000):
+        pcm = self.decoder.decode(data)
         # pcmを1chにする
         pcm = np.frombuffer(pcm,dtype=np.int16)
-        pcm = pcm.reshape(-1,2)[:,0].tobytes()
-        
-        vad.addFrame(pcm,packet.timestamp,final=is_final)
+        pcm = pcm.reshape(-1,2)[:,0].astype(np.float32)
+        # downsample
+        if sample_rate != DISCORD_OPUS_PACKETS_SAMPLE_RATE:
+            pcm = librosa.resample(pcm,orig_sr=DISCORD_OPUS_PACKETS_SAMPLE_RATE,target_sr=sample_rate).astype(np.float32)
+        return pcm
     
-    def emit(self,eventName,eventData,opusData=None):
+    def emitTranscriptionEvent(self,eventName,eventData,opusData=None):
         dataJson=json.dumps(eventData)
 
         self.event_buffer.append(
@@ -56,8 +77,26 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
             )
         )
 
-    def createVAD(self,speaker_id):
-        self.vad[speaker_id] = VAD(48000,20,200,2,speaker_id=speaker_id)
+    def createKeywordSpottingFoundEventResponse(self,kw_results,speaker_id):
+        found_response = KeywordSpottingFoundEventResponse(
+            speaker_id=speaker_id,
+            decoder_text=kw_results["text"]
+        )
+        for kw in kw_results["found"]:
+            found = KeywordSpottingFound(
+                keyword=kw["word"],
+                probability=kw["prob"]
+            )
+            found_response.found.append(found)
+        print(f"KeywordSpottingResponse: {kw_results}")  
+        response=KeywordSpottingResponse(found=found_response)
+        return response
+    
+    def createKeywordSpottingConfigResponse(self,success,keyword):
+        config_response=KeywordSpottingConfigResponse(success=success,keyword=keyword)
+        response=KeywordSpottingResponse(config=config_response)
+        return response
+
 
     async def TranscriptionBiStreams(self, request_iterator, context):
         speaker_id = ""
@@ -104,49 +143,73 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
             del self.transcribed_history[speaker_id]
         print(f"terminated {speaker_id}") 
 
-
-    def onDetect(self,voiced_frames=None,prompt="",futures=None):
-        if voiced_frames is None:
-            return
+    async def KeywordSpotting(self, request_iterator, context):
+        chunk_size = int(16000 * 0.6) # 0.6sec
+        stride_size = int(16000 * 0.6) # 0.6sec
         
-        self.emit("vad",{
-            "id": voiced_frames.id,
-            "speaker_id": voiced_frames.speaker_id,
-            "timestamp": voiced_frames.getBegin(),
-            "duration": voiced_frames.getDuration(),            
-        })
-        # 過去の音声と結合
-        if self.voiced_frames.get(voiced_frames.speaker_id) is None:
-            self.voiced_frames[voiced_frames.speaker_id] = [voiced_frames]
-        else:
-            self.voiced_frames[voiced_frames.speaker_id].append(voiced_frames)
+        kw=self.getKeywordSpottingInstance()
+        buffers = {}
+        flush_size = {}
+        async for request in request_iterator:
+            if request.HasField("config"):
+                # config
+                keyword = request.config.keyword
+                kw.setKeyword(keyword)
+                yield self.createKeywordSpottingConfigResponse(True,keyword)
+                continue
+            if request.HasField("audio"):
+                # audio
+                packets = request.audio.data
+                speaker_id = request.audio.speaker_id
 
+                # bufferの取得または作成
+                if buffers.get(speaker_id) is None:
+                    buffers[speaker_id]=np.ndarray(shape=(0,),dtype=np.float32)
+                if flush_size.get(speaker_id) is None:
+                    flush_size[speaker_id]=chunk_size
+
+                if len(packets) > 0:
+                    for packet in packets:
+                        pcm = self.decodePacket(packet)
+                        buffers[speaker_id] = np.concatenate([buffers[speaker_id],pcm])
+
+                if request.is_final or len(buffers[speaker_id]) > flush_size[speaker_id]:
+                    result=kw(buffers[speaker_id])
+                    yield self.createKeywordSpottingFoundEventResponse(result,speaker_id)
+                    # stride分を残してbufferを更新する
+                    buffers[speaker_id]=buffers[speaker_id][-stride_size:]
+                    flush_size[speaker_id]=chunk_size+stride_size
+
+                if request.is_final:
+                    break
+        print("terminated KeywordSpotting")
+
+    def onDetect(self,voiced_frames=None,proc=None,futures=None):
+        if voiced_frames is None or proc is None or futures is None:
+            raise Exception("invalid arguments")
         if len(futures) > 1:
             # すでに待機中のスレッドがあるので新たに投入しない
-            # なお、futuresが1の場合は処理中の場合と待機中の場合があるが、
+            # なお、len(futures)が1の場合は処理中の場合と待機中の場合があるが、
             # 待機中に投入しても実害はないので、投入する
             return
         # 音声解析にまわす
         future=asyncio.get_running_loop().run_in_executor(
                 self.pool,
-                self.transcribe,
-                self.model,
-                prompt, # prompt
-                voiced_frames.speaker_id,
-                self.lock
+                proc,
+                voiced_frames=voiced_frames,
+                lock=self.lock
         )
-        future.add_done_callback(functools.partial(self.onTranscribed,futures=futures))
+        future.add_done_callback(functools.partial(self.onProcDone,futures=futures))
         futures.append(future)
 
-    def onTranscribed(self,future,futures=None):
+    def onProcDone(self,future,futures=None):
         if future.exception() is not None:
             print(future.exception())
             if self.lock.locked():
                 print("lock release(abnormal)")
                 self.lock.release()
-
         futures.remove(future)
-
+  
     def transcribe(self,model=None,prompt="",speaker_id="",lock=None):
         threading.current_thread().name = "transcribe_waiting"
         # 再入禁止

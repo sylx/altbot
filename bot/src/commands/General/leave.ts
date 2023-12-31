@@ -29,7 +29,9 @@ export default class LeaveCommand {
 		const voiceChat = await resolveDependencyPerGuild(VoiceChat, interaction.guildId)
 		const dataRepository = db.get(Data)
 		await dataRepository.set('lastVoiceChannel', null)
-		await voiceChat.leave()
+		if(interaction.guildId && voiceChat.isEnable()){
+			await voiceChat.leave()
+		}
 
 		simpleSuccessEmbed(
 			interaction,

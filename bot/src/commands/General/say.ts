@@ -73,31 +73,12 @@ export default class SayCommand {
 			await tts.speak(text,speaker_id,{useCache: initial_count != 1, imediate: count == initial_count})
 			if(count>1) await repeat(text, count-1,initial_count)
 		}
-		try {
-			await simpleSuccessEmbed(
-				interaction,
-				`言います: ${text}`
-			)
-			await repeat(text, count, count)
-			await simpleSuccessEmbed(
-				interaction,
-				`言いました ${count}回`
-			)
-			await voiceChat.leave()
-		}catch( err: any ){
-			if(err == "yet join voice channel"){
-				simpleErrorEmbed(
-					interaction,
-					`まずはボイスチャンネルに呼んでください /join`
-				)
-			}else{
-				simpleErrorEmbed(
-					interaction,
-					err
-				)
-				console.error(err)
-			}
-		}
+		await simpleSuccessEmbed(
+			interaction,
+			`言います: ${text}`
+		)
+		await repeat(text, count, count)
+		await voiceChat.leave()
 	}
 
 }

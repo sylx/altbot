@@ -22,7 +22,7 @@ class TranscriptionStub(object):
         self.KeywordSpotting = channel.stream_stream(
                 '/AiService.Transcription/KeywordSpotting',
                 request_serializer=transcription__pb2.KeywordSpottingRequest.SerializeToString,
-                response_deserializer=transcription__pb2.KeywordSpottingFound.FromString,
+                response_deserializer=transcription__pb2.KeywordSpottingResponse.FromString,
                 )
 
 
@@ -52,7 +52,7 @@ def add_TranscriptionServicer_to_server(servicer, server):
             'KeywordSpotting': grpc.stream_stream_rpc_method_handler(
                     servicer.KeywordSpotting,
                     request_deserializer=transcription__pb2.KeywordSpottingRequest.FromString,
-                    response_serializer=transcription__pb2.KeywordSpottingFound.SerializeToString,
+                    response_serializer=transcription__pb2.KeywordSpottingResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -94,6 +94,6 @@ class Transcription(object):
             metadata=None):
         return grpc.experimental.stream_stream(request_iterator, target, '/AiService.Transcription/KeywordSpotting',
             transcription__pb2.KeywordSpottingRequest.SerializeToString,
-            transcription__pb2.KeywordSpottingFound.FromString,
+            transcription__pb2.KeywordSpottingResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
