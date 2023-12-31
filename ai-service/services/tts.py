@@ -24,6 +24,10 @@ from scipy.signal import butter, lfilter
 from libs.vits_japros.model import VITSJaProsModel
 from libs.vits_japros.text import g2p
 
+from Style_Bert_VITS2.common.tts_model import Model, ModelHolder
+
+import os
+
 def butter_lowpass(cutoff, fs, order=5):
     nyquist = 0.5 * fs
     normal_cutoff = cutoff / nyquist
@@ -87,6 +91,57 @@ class TtsMoeGoeBackend():
             audio = librosa.resample(audio, orig_sr=22050, target_sr=24000)
             return audio
 
+class TtsStyleBertVits2Backend():
+    def __init__(self):
+        super().__init__()
+        self.model_holder = ModelHolder(f"./Style_Bert_VITS2/model_assets", "cuda:0")
+        self.speakers = list(self.model_holder.model_files_dict.keys())
+        self.model_holder.models = {}
+
+    def load_model(self,id):
+        if self.model_holder.models.get(id) is None:
+            print(f"load model {id}")
+            model_paths = self.model_holder.model_files_dict[id]
+            model = Model(
+                model_path=model_paths[0],
+                config_path=os.path.join(self.model_holder.root_dir, id, "config.json"),
+                style_vec_path=os.path.join(
+                    self.model_holder.root_dir, id, "style_vectors.npy"
+                ),
+                device=self.model_holder.device,
+            )
+            model.load_net_g()
+            self.model_holder.models[id]=model
+        return self.model_holder.models[id]
+
+    def generateSpeech(self,text,speaker_id=1,style='Neutral',style_weight=5.0):
+        if speaker_id > len(self.speakers):
+            speaker_id = 1
+        id = self.speakers[speaker_id-1]
+        model = self.load_model(id)
+        sr, audio = model.infer(
+            text=text,
+            language="JP",
+            sid=0,
+            reference_audio_path=None,
+            sdp_ratio=0.2,
+            noise=0.6,
+            noisew=0.8,
+            length=1.0,
+            line_split=True,
+            split_interval=0.5,
+            assist_text=None,
+            assist_text_weight=1.0,
+            use_assist_text=False,
+            style=style,
+            style_weight=style_weight
+        )
+        audio = audio.astype(np.float32)
+        audio = librosa.resample(audio, orig_sr=sr, target_sr=24000)
+        return audio
+
+
+
 class TtsVitsJaProsBackend():
     def __init__(self) -> None:
         super().__init__()
@@ -116,7 +171,8 @@ class Tts(tts_pb2_grpc.TtsServicer):
     def __init__(self,pool) -> None:        
         super().__init__()
         self.pool = pool
-        self.backend = TtsMoeGoeBackend()
+        #self.backend = TtsMoeGoeBackend()
+        self.backend = TtsStyleBertVits2Backend()
         #self.backend = TtsVitsJaProsBackend()
         self.e2k = EnglishToKana()        
         # reverb
