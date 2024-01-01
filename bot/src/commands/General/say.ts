@@ -1,5 +1,5 @@
 import { Category } from "@discordx/utilities"
-import { ApplicationCommandOptionType, CommandInteraction, GuildMember, Message, VoiceChannel } from "discord.js"
+import { ApplicationCommandOptionType, AutocompleteInteraction, CommandInteraction, GuildMember, Message, VoiceChannel } from "discord.js"
 import { Client, SlashChoice, SlashOption } from "discordx"
 import { resolveDependency, resolveDependencyPerGuild, simpleErrorEmbed, simpleSuccessEmbed } from "@utils/functions"
 import { Discord, Slash } from "@decorators"
@@ -11,37 +11,31 @@ import { VoiceChat } from "@services"
 export default class SayCommand {
 
 	@Slash({ 
-		description: "喋ります ver2",
+		description: "喋ります ver3",
 		name: 'say'
 	})
 	async say(
 		@SlashOption({ name: 'text', type: ApplicationCommandOptionType.String, required: true,description: "なんか言わせたいこと" }) text: string,
-		@SlashOption({ name: 'count', type: ApplicationCommandOptionType.Integer, required: false,description: "何回言わせるか(1-10)" }) count: number,
-		@SlashOption({ name: '名前呼びチェック', type: ApplicationCommandOptionType.Mentionable,description: "対象者の名前を呼ぶ",required: false }) target_member: GuildMember,
 		@SlashOption({ name: 'speaker_id', type: ApplicationCommandOptionType.Integer,description: "SpeakerId",required: false }) speaker_id: number,
+		@SlashOption({ name: 'style', type: ApplicationCommandOptionType.String,description: "感情",required: false,
+		autocomplete: function (
+			interaction: AutocompleteInteraction
+		  ) {
+			  interaction.respond([
+				// 'Neutral', 'Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise'
+				{ name: "普通", value: "Neutral" },
+				{ name: "怒り", value: "Angry" },
+				{ name: "嫌悪", value: "Disgust" },
+				{ name: "恐怖", value: "Fear" },
+				{ name: "喜び", value: "Happy" },
+				{ name: "悲しみ", value: "Sad" }
+			  ]);
+		  }		
+	 }) style: string,
 		interaction: CommandInteraction,
 		client: Client,
 		{ localize }: InteractionData
 	) {
-		if(target_member){
-			await simpleSuccessEmbed(
-				interaction,
-				JSON.stringify({
-					GuildMember: {
-						id: target_member.id,
-						nickname: target_member.nickname,
-						displayName: target_member.displayName,
-					},
-					User: {
-						id: target_member.user.id,
-						username: target_member.user.username,
-						tag: target_member.user.tag,
-						globalname: target_member.user.globalName
-					}
-				},null,2)
-			)
-			return
-		}
 		if(interaction.guildId === null) return
 		const voiceChat = await resolveDependencyPerGuild(VoiceChat, interaction.guildId)
 		const tts= await resolveDependencyPerGuild(Tts, interaction.guildId)
@@ -67,10 +61,12 @@ export default class SayCommand {
 		await voiceChat.join(current_channel)
 		
 
-		if(!count || count < 1) count=1
-		if(count>10) count=10
+		const count = 1
 		const repeat = async (text: string, count: number,initial_count: number) => {
-			await tts.speak(text,speaker_id,{useCache: initial_count != 1, imediate: count == initial_count})
+			await tts.speak(text,speaker_id,{useCache: initial_count != 1, imediate: count == initial_count, 
+				extra: {
+					style
+				}})
 			if(count>1) await repeat(text, count-1,initial_count)
 		}
 		await simpleSuccessEmbed(

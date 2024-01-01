@@ -144,7 +144,8 @@ proto.AiService.TtsSpeakRequest.prototype.toObject = function(opt_includeInstanc
 proto.AiService.TtsSpeakRequest.toObject = function(includeInstance, msg) {
   var f, obj = {
     text: jspb.Message.getFieldWithDefault(msg, 1, ""),
-    speakerId: jspb.Message.getFieldWithDefault(msg, 2, 0)
+    speakerId: jspb.Message.getFieldWithDefault(msg, 2, 0),
+    extra: jspb.Message.getFieldWithDefault(msg, 3, "")
   };
 
   if (includeInstance) {
@@ -189,6 +190,10 @@ proto.AiService.TtsSpeakRequest.deserializeBinaryFromReader = function(msg, read
       var value = /** @type {number} */ (reader.readInt32());
       msg.setSpeakerId(value);
       break;
+    case 3:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setExtra(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -232,6 +237,13 @@ proto.AiService.TtsSpeakRequest.serializeBinaryToWriter = function(message, writ
       f
     );
   }
+  f = message.getExtra();
+  if (f.length > 0) {
+    writer.writeString(
+      3,
+      f
+    );
+  }
 };
 
 
@@ -268,6 +280,24 @@ proto.AiService.TtsSpeakRequest.prototype.getSpeakerId = function() {
  */
 proto.AiService.TtsSpeakRequest.prototype.setSpeakerId = function(value) {
   return jspb.Message.setProto3IntField(this, 2, value);
+};
+
+
+/**
+ * optional string extra = 3;
+ * @return {string}
+ */
+proto.AiService.TtsSpeakRequest.prototype.getExtra = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 3, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.AiService.TtsSpeakRequest} returns this
+ */
+proto.AiService.TtsSpeakRequest.prototype.setExtra = function(value) {
+  return jspb.Message.setProto3StringField(this, 3, value);
 };
 
 

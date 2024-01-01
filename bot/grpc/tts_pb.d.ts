@@ -12,6 +12,8 @@ export class TtsSpeakRequest extends jspb.Message {
     setText(value: string): TtsSpeakRequest;
     getSpeakerId(): number;
     setSpeakerId(value: number): TtsSpeakRequest;
+    getExtra(): string;
+    setExtra(value: string): TtsSpeakRequest;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): TtsSpeakRequest.AsObject;
@@ -27,6 +29,7 @@ export namespace TtsSpeakRequest {
     export type AsObject = {
         text: string,
         speakerId: number,
+        extra: string,
     }
 }
 

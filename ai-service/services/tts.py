@@ -27,6 +27,7 @@ from libs.vits_japros.text import g2p
 from Style_Bert_VITS2.common.tts_model import Model, ModelHolder
 
 import os
+import json
 
 def butter_lowpass(cutoff, fs, order=5):
     nyquist = 0.5 * fs
@@ -73,7 +74,7 @@ class TtsMoeGoeBackend():
         _ = self.net_g_ms.eval()
         utils.load_checkpoint(model, self.net_g_ms)
     
-    def generateSpeech(self,text,speaker_id=1):
+    def generateSpeech(self,text,speaker_id=1,extra=None):
         length_scale, text = get_label_value(text, 'LENGTH', 1, 'length scale')
         noise_scale, text = get_label_value(text, 'NOISE', 0.667, 'noise scale')
         noise_scale_w, text = get_label_value(text, 'NOISEW', 0.8, 'deviation of noise')
@@ -114,11 +115,18 @@ class TtsStyleBertVits2Backend():
             self.model_holder.models[id]=model
         return self.model_holder.models[id]
 
-    def generateSpeech(self,text,speaker_id=1,style='Neutral',style_weight=5.0):
-        if speaker_id > len(self.speakers):
-            speaker_id = 1
-        id = self.speakers[speaker_id-1]
+    def generateSpeech(self,text,speaker_id=1,extra=None):
+        if speaker_id >= len(self.speakers):
+            speaker_id = 0
+        id = self.speakers[speaker_id]
         model = self.load_model(id)
+        if extra is not None:
+            style = extra.get("style","Neutral")
+            style_weight = extra.get("style_weight",5.0)
+        else:
+            style = "Neutral"
+            style_weight = 5.0
+
         sr, audio = model.infer(
             text=text,
             language="JP",
@@ -188,6 +196,15 @@ class Tts(tts_pb2_grpc.TtsServicer):
     async def SpeakStream(self, request, context):
         # リクエストを受け取る        
         wholeText = request.text
+        
+        #extraはjson形式で渡されるので、ここでパースする
+        extra = None
+        if request.extra != '':
+            try:
+                extra = json.loads(request.extra)
+            except Exception as e:
+                print(e)        
+
         # alphabetをカタカナに変換する
         wholeText=re.sub(r'[a-zA-Z]+', lambda m: self.e2k.convert(m.group(),True), wholeText)
         
@@ -196,7 +213,7 @@ class Tts(tts_pb2_grpc.TtsServicer):
         sentences = self.splitText(wholeText,20)
         # 音声データを生成する
         for text in sentences:
-            audio = await asyncio.get_running_loop().run_in_executor(self.pool, self.generateSpeech, text,speaker_id,self.lock)
+            audio = await asyncio.get_running_loop().run_in_executor(self.pool, self.generateSpeech, text,speaker_id,extra,self.lock)
             yield tts_pb2.TtsSpeakResponse(audio=audio,text=text)
 
     def splitText(self, wholeText,minLength=10):
@@ -224,12 +241,12 @@ class Tts(tts_pb2_grpc.TtsServicer):
         return ret
 
 
-    def generateSpeech(self,text,speaker_id,lock):
+    def generateSpeech(self,text,speaker_id,extra,lock):
         threading.current_thread().name = "generateSpeech"
         if lock.acquire(blocking=True,timeout=10) == False:
             raise Exception("lock timeout in generateSpeech")
         
-        audio=self.backend.generateSpeech(text,speaker_id)
+        audio=self.backend.generateSpeech(text,speaker_id,extra)
         
 
         # ピッチをGladosぽくする

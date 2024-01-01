@@ -138,7 +138,7 @@ export default class InfoCommand {
 		const select = new StringSelectMenuBuilder()
 			.setCustomId('speaker_id')
 			.setPlaceholder('声の選択')
-		const tts = await resolveDependency(Tts)
+		const tts = await resolveDependencyPerGuild(Tts,interaction.guildId as string)
 		const list = await tts.getSpeakersInfo()
 		list.getSpeakersList().forEach((speaker,i) => {
 			//25個までしか選択肢に入れられない

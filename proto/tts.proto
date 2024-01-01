@@ -11,6 +11,7 @@ service Tts {
 message TtsSpeakRequest {
 	string text = 1;
 	int32 speaker_id = 2;
+	string extra = 3; // json string
 }
 
 message TtsSpeakResponse {

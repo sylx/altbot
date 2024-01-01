@@ -20,7 +20,8 @@ import { IGuildDependent, guildScoped } from "@utils/functions"
 interface TtsSpeakOptions {
     useCache?: boolean,
     silent?: boolean,
-    imediate?: boolean
+    imediate?: boolean,
+    extra?: {[key: string]: any}
 }
 
 @guildScoped()
@@ -131,6 +132,9 @@ export class Tts implements IGuildDependent{
         const req = new TtsSpeakRequest()
         req.setText(text)
         req.setSpeakerId(speaker_id || this.defaultSpeakerId)
+        if(option?.extra){
+            req.setExtra(JSON.stringify(option?.extra || {}))
+        }
         const stream=this.client.speakStream(req)
         return new Promise((resolve, reject) => {
             stream.on("data", async (response : TtsSpeakResponse) => {
