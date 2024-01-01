@@ -1,13 +1,19 @@
 from transformers import Wav2Vec2Tokenizer, Wav2Vec2FeatureExtractor,Wav2Vec2ForCTC,Wav2Vec2Processor
 import torch
+import jaconv
 
 MODEL_NAME = "AndrewMcDowell/wav2vec2-xls-r-300m-japanese"
 
 class Beam:
-    def __init__(self,word,ids,priority):
+    def __init__(self,word,ids,priority,alt_ids=None):
         self.word=word
         self.priority=priority
         self.ids=ids
+        if alt_ids is None:
+            self.alt_ids=[None]*len(ids)
+        else:
+            self.alt_ids=alt_ids
+        
         self.result=None
         self.start_index=0
         self.prob_total=0.0
@@ -52,7 +58,13 @@ class Beam:
         
     def step(self,probs,step,threshold):        
         current_id=self.ids[self.id_index]
+        alt_id = self.alt_ids[self.id_index]
         step_prob=probs[current_id]
+        if alt_id is not None:
+            for aid in alt_id:
+                if probs[aid] > step_prob:
+                    step_prob=probs[alt_id]
+    
         #last_id_prob=probs[self.ids[self.id_index-1]] if self.id_index > 0 else 0.0
 
         # id_index==0の時は、BEAM段階で刈り取られているので、調べるまでもなく、thresholdを上回っている（筈）
@@ -100,7 +112,25 @@ class KeywordSpotting:
         self.words=words
         self.beams={}
         for i,word in enumerate(words):
-            beam = Beam(word,self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(word)),i)
+            ids = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(word))
+            # すべてひらがなにしてidsを作成する
+            hira_word = jaconv.kata2hira(word)
+            hira_ids = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(hira_word))
+            # すべてカタカナにしてidsを作成する
+            kata_word = jaconv.hira2kata(word)
+            kata_ids = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(kata_word))
+
+            alt_ids=[None]*len(ids)
+            for i in range(len(ids)):
+                alt=[]
+                if ids[i] != hira_ids[i]:
+                    alt.append(hira_ids[i])
+                if ids[i] != kata_ids[i]:
+                    alt.append(kata_ids[i])
+                if len(alt) > 0:
+                    alt_ids[i]=alt
+
+            beam = Beam(word,ids,i,alt_ids=alt_ids)
             first_token=beam.ids[0]
             if self.beams.get(first_token) is None:
                 self.beams[first_token]=[]
