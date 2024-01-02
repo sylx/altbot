@@ -1,12 +1,11 @@
-import * as grpc from "@grpc/grpc-js"
+import * as grpc from "@grpc/grpc-js";
 
-import "reflect-metadata"
-import { TranscriptionClient } from "./grpc/transcription_grpc_pb"
-import { OpusEncoder } from "@discordjs/opus"
-import { DiscordOpusPacketList,DiscordOpusPacket, KeywordSpottingRequest, KeywordSpottingRequestConfig, KeywordSpottingRequestAudio, KeywordSpottingResponse } from "./grpc/transcription_pb";
-import fs from "node:fs"
-import {once} from "events"
-import { Key } from "ts-toolbelt/out/Any/Key";
+import "reflect-metadata";
+import { TranscriptionClient } from "./grpc/transcription_grpc_pb";
+import { OpusEncoder } from "@discordjs/opus";
+import { DiscordOpusPacketList, DiscordOpusPacket, KeywordSpottingRequest, KeywordSpottingRequestConfig, KeywordSpottingRequestAudio, KeywordSpottingResponse } from "./grpc/transcription_pb";
+import fs from "node:fs";
+import { once } from "events";
 
 const encoder = new OpusEncoder(48000, 2);  
 
