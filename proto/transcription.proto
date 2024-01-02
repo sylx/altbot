@@ -26,6 +26,7 @@ message TranscriptionEvent {
 
 message KeywordSpottingRequestConfig {
 	repeated string keyword = 1;
+	float threshold = 2;
 }
 
 message KeywordSpottingRequestAudio {
@@ -43,8 +44,9 @@ message KeywordSpottingRequest {
 }
 
 message KeywordSpottingFound {
-	string keyword = 1;
-	float probability = 2;
+	string id = 1;
+	string keyword = 2;
+	float probability = 3;
 }
 
 message KeywordSpottingFoundEventResponse {

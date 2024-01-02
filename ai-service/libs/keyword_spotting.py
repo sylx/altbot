@@ -56,14 +56,11 @@ class Beam:
             self.unmatch_count+=1
             return forkBeam
         
-    def step(self,probs,step,threshold):        
-        current_id=self.ids[self.id_index]
-        alt_id = self.alt_ids[self.id_index]
-        step_prob=probs[current_id]
-        if alt_id is not None:
-            for aid in alt_id:
-                if probs[aid] > step_prob:
-                    step_prob=probs[alt_id]
+    def step(self,probs,step,threshold):
+        prob_indies=[self.ids[self.id_index]]
+        if self.alt_ids[self.id_index] is not None:
+            prob_indies.extend(self.alt_ids[self.id_index])
+        step_prob=probs[prob_indies].max()
     
         #last_id_prob=probs[self.ids[self.id_index-1]] if self.id_index > 0 else 0.0
 

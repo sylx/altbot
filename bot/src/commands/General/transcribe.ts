@@ -30,7 +30,8 @@ export default class TranscribeCommand {
 		GuildOnly
 	)
 	async start(
-		@SlashOption({ name: 'keyword', type: ApplicationCommandOptionType.String, required: true,description: "検出キーワード（ひらがなorカタカナ、空白区切りで複数可)" }) keyword: string,
+		@SlashOption({ name: 'keyword', type: ApplicationCommandOptionType.String, required: true,description: "検出キーワード(空白区切りで複数可)" }) keyword: string,
+		@SlashOption({ name: 'threshold', type: ApplicationCommandOptionType.Number, required: true,description: "検出しきい値(0.0-1.0)" }) threshold: number,
 		interaction: CommandInteraction,
 		client: Client,
 		{ localize }: InteractionData
@@ -56,9 +57,10 @@ export default class TranscribeCommand {
 		const abortController = new AbortController()
 		const emitter = new EventEmitter()
 		const event_log : KeywordSpottingFoundEvent[]=[]
-
-		this.updateEmbed(interaction,keyword,event_log,abortController)
 		
+		emitter.on("ready",()=>{
+			this.updateEmbed(interaction,keyword,event_log,abortController)
+		})
 		emitter.on("found",async (evt: KeywordSpottingFoundEvent)=>{
 			
 			event_log.push(evt)
@@ -67,22 +69,34 @@ export default class TranscribeCommand {
 			this.updateEmbed(interaction,keyword,event_log,abortController)			
 
 			const words=[
-				"は？",
-				"今なんつった？",
-				"おい！",
-				"何？",
+				"うん。いいね",
+				"綺麗な声だね",
+				"いいじゃん！いいじゃん！",
+				"おっけー",
+				"いつもありがとう",
+				"好きだよ"
 			]
 			const picked_word=words[Math.floor(Math.random() * words.length)]
-			await tts.speak(picked_word,null,{
+			//const picked_word=evt.keyword
+			await tts.speak(picked_word,undefined,{
 				useCache: true
 			})
 		})
-		await keywordSpotting.start(keyword.split(/[　\s]+/),channel_members,emitter,abortController)
-		this.updateEmbed(interaction,keyword,event_log,null)
-		simpleSuccessEmbed(
-			interaction,
-			`終了しました`
-		)
+		try{
+			await keywordSpotting.start(keyword.split(/[　\s]+/),threshold,channel_members,emitter,abortController)
+			this.updateEmbed(interaction,keyword,event_log,null)
+			simpleSuccessEmbed(
+				interaction,
+				`終了しました`
+			)
+		}catch(e: any){
+			this.updateEmbed(interaction,keyword,event_log,null)
+			simpleErrorEmbed(
+				interaction,
+				`エラーが発生したので終了します ${e}}`
+			)
+			console.error(e)
+		}
 		await voiceChat.leave()
 	}
 

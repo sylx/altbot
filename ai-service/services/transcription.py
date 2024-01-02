@@ -77,18 +77,22 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
             )
         )
 
-    def createKeywordSpottingFoundEventResponse(self,kw_results,speaker_id):
+    def createKeywordSpottingFoundEventResponse(self,kw_results,speaker_id,start_samples=0):
         found_response = KeywordSpottingFoundEventResponse(
             speaker_id=speaker_id,
             decoder_text=kw_results["text"]
         )
+        # logits 1stepのサンプル数(近似値)
+        step_samples = 320 
         for kw in kw_results["found"]:
+            time_samples = ((kw["start"] * step_samples) + start_samples) // 640 # 640で割ることで、1stepの誤差を許容する
+            id = f"{speaker_id}-{time_samples}"
             found = KeywordSpottingFound(
+                id = id,
                 keyword=kw["word"],
                 probability=kw["prob"]
             )
             found_response.found.append(found)
-        print(f"KeywordSpottingResponse: {kw_results}")  
         response=KeywordSpottingResponse(found=found_response)
         return response
     
@@ -144,17 +148,23 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         print(f"terminated {speaker_id}") 
 
     async def KeywordSpotting(self, request_iterator, context):
-        chunk_size = int(16000 * 0.6) # 0.6sec
+        chunk_size = int(16000 * 0.9) # 0.9sec
         stride_size = int(16000 * 0.6) # 0.6sec
         
         kw=self.getKeywordSpottingInstance()
         buffers = {}
         flush_size = {}
+        threshold = 0.5
+        buffer_left_samples = 0 # リクエストの最初を0として、バッファが始まった時点でのサンプル数
+        buffer_right_samples=0 # リクエストの最初を0として、バッファの最後のサンプル数
+        packet_sample_size = int(0.02 * 16000)
         async for request in request_iterator:
             if request.HasField("config"):
                 # config
                 keyword = request.config.keyword
                 kw.setKeyword(keyword)
+                if request.config.threshold:
+                    threshold = request.config.threshold
                 yield self.createKeywordSpottingConfigResponse(True,keyword)
                 continue
             if request.HasField("audio"):
@@ -172,12 +182,18 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
                     for packet in packets:
                         pcm = self.decodePacket(packet)
                         buffers[speaker_id] = np.concatenate([buffers[speaker_id],pcm])
+                    buffer_right_samples += len(packets) * packet_sample_size
 
                 if request.is_final or len(buffers[speaker_id]) > flush_size[speaker_id]:
                     result=kw(buffers[speaker_id])
-                    yield self.createKeywordSpottingFoundEventResponse(result,speaker_id)
+                    # foundのうちthresholdを超えるものだけを返す
+                    result["found"] = [f for f in result["found"] if f["prob"] > threshold]
+                    print(f"KeywordSpottingResponse: {result} {speaker_id} {buffer_left_samples/16000:0.2f} {buffer_right_samples/16000:0.2f}")
+                    if len(result["found"]) > 0:
+                        yield self.createKeywordSpottingFoundEventResponse(result,speaker_id,start_samples=buffer_left_samples)
                     # stride分を残してbufferを更新する
                     buffers[speaker_id]=buffers[speaker_id][-stride_size:]
+                    buffer_left_samples = buffer_right_samples - stride_size
                     flush_size[speaker_id]=chunk_size+stride_size
 
                 if request.is_final:

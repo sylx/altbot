@@ -42,6 +42,7 @@ export class KeywordSpotting implements IGuildDependent{
           )
     }
     protected connectApi() : ApiStream{
+        this.client
         return this.client.keywordSpotting()
     }
     getGuildId(): string | null {
@@ -55,10 +56,11 @@ export class KeywordSpotting implements IGuildDependent{
         })
     }
 
-    protected async setKeyword(api_stream: ApiStream,keyword: string[]) : Promise<boolean>{
+    protected async setKeyword(api_stream: ApiStream,keyword: string[],threshold: number) : Promise<boolean>{
         const req=new KeywordSpottingRequest()
         const config = new KeywordSpottingRequestConfig()
         config.setKeywordList(keyword)
+        config.setThreshold(threshold)
         req.setConfig(config)
         api_stream.write(req)
         const response=await (once(api_stream,"data") as Promise<KeywordSpottingResponse[]>)
@@ -66,40 +68,47 @@ export class KeywordSpotting implements IGuildDependent{
         return response[0]?.getConfig()?.getSuccess() ?? false
     }
 
-    protected getOpusStream(member: GuildMember,timeout: number) : UserStream{
+    protected getOpusStream(member: GuildMember,timeout: number | null) : UserStream{
         const connection = this.voiceChat.getConnection()
         if(!connection){
             throw new Error("voice connection is null")
         }
         const receiver = connection.receiver;
-        
         return {
             user_id: member.id,
             stream: receiver.subscribe(member.id, {
-                end: {
+                end: timeout ? {
                     behavior: EndBehaviorType.AfterSilence,
                     duration: timeout,
-                },
+                } : {
+                    behavior: EndBehaviorType.Manual
+                }
             })
         } as UserStream
     }
 
-    public async start(keyword: string[],listen_members: GuildMember[],emitter: EventEmitter,abortController : AbortController) : Promise<void>{
+    public async start(keyword: string[],threshold: number,listen_members: GuildMember[],emitter: EventEmitter,abortController : AbortController) : Promise<void>{
         const api_stream=await this.connectApi()
         const connection = this.voiceChat.getConnection()
         if(!connection){
             throw new Error("voice connection is null")
         }
-        const streams=listen_members.map(member=>this.getOpusStream(member,10_000))
+        const streams=listen_members.map(member=>this.getOpusStream(member,null))
 
         // abortハンドラを設定
         abortController.signal.addEventListener("abort",()=>{
             this.abort(api_stream,streams)
         })
+        // api_streamのエラーハンドラを設定
+        api_stream.on("error",(e)=>{
+            this.abort(api_stream,streams)
+            throw e
+        })
         // キーワードを設定
-        if(!await this.setKeyword(api_stream,keyword)){
+        if(!await this.setKeyword(api_stream,keyword,threshold)){
             throw new Error("keyword setting failed")
         }
+        emitter.emit("ready")
 
         // 送信ループ
         const submit_promises=(function(){
@@ -115,6 +124,7 @@ export class KeywordSpotting implements IGuildDependent{
                         api_stream.write(req)
                     }
                 }catch(e){
+                    //abortするとここに来る
                     console.error(e)
                 }
             })
@@ -122,6 +132,7 @@ export class KeywordSpotting implements IGuildDependent{
         //受信ループ
         const receive_promises=(async function(){
             try {
+                let last_found_timeout : {[key: string]: NodeJS.Timeout} = {}
                 for await (const response of api_stream){
                     console.log("from server",JSON.stringify(response.toObject()))
                     const foundResponse : KeywordSpottingFoundEventResponse | null = response.getFound()
@@ -129,7 +140,13 @@ export class KeywordSpotting implements IGuildDependent{
                         const found : KeywordSpottingFound[] = foundResponse.getFoundList()
                         if(found.length === 0) continue
                         for(let f of found){
-                            console.log("emit")
+                            const found_id = f.getId(), found_keyword = f.getKeyword()
+                            if(last_found_timeout[found_id]){
+                                continue
+                            }
+                            if(last_found_timeout[found_keyword]){
+                                continue
+                            }
                             emitter.emit("found",{
                                 keyword: f.getKeyword(),
                                 speaker_id: foundResponse.getSpeakerId(),
@@ -137,10 +154,17 @@ export class KeywordSpotting implements IGuildDependent{
                                 probability: f.getProbability(),
                                 timestamp: Date.now()
                             } as KeywordSpottingFoundEvent)
+                            last_found_timeout[found_id]=setTimeout(()=>{
+                                delete last_found_timeout[found_id]
+                            },1000)
+                            last_found_timeout[found_keyword]=setTimeout(()=>{
+                                delete last_found_timeout[found_keyword]
+                            },3000)
                         }
                     }
                 }
             }catch(e){
+                //abortするとここに来る                
                 console.error(e)
             }
         })()

@@ -930,7 +930,8 @@ proto.AiService.KeywordSpottingRequestConfig.prototype.toObject = function(opt_i
  */
 proto.AiService.KeywordSpottingRequestConfig.toObject = function(includeInstance, msg) {
   var f, obj = {
-    keywordList: (f = jspb.Message.getRepeatedField(msg, 1)) == null ? undefined : f
+    keywordList: (f = jspb.Message.getRepeatedField(msg, 1)) == null ? undefined : f,
+    threshold: jspb.Message.getFloatingPointFieldWithDefault(msg, 2, 0.0)
   };
 
   if (includeInstance) {
@@ -971,6 +972,10 @@ proto.AiService.KeywordSpottingRequestConfig.deserializeBinaryFromReader = funct
       var value = /** @type {string} */ (reader.readString());
       msg.addKeyword(value);
       break;
+    case 2:
+      var value = /** @type {number} */ (reader.readFloat());
+      msg.setThreshold(value);
+      break;
     default:
       reader.skipField();
       break;
@@ -1004,6 +1009,13 @@ proto.AiService.KeywordSpottingRequestConfig.serializeBinaryToWriter = function(
   if (f.length > 0) {
     writer.writeRepeatedString(
       1,
+      f
+    );
+  }
+  f = message.getThreshold();
+  if (f !== 0.0) {
+    writer.writeFloat(
+      2,
       f
     );
   }
@@ -1044,6 +1056,24 @@ proto.AiService.KeywordSpottingRequestConfig.prototype.addKeyword = function(val
  */
 proto.AiService.KeywordSpottingRequestConfig.prototype.clearKeywordList = function() {
   return this.setKeywordList([]);
+};
+
+
+/**
+ * optional float threshold = 2;
+ * @return {number}
+ */
+proto.AiService.KeywordSpottingRequestConfig.prototype.getThreshold = function() {
+  return /** @type {number} */ (jspb.Message.getFloatingPointFieldWithDefault(this, 2, 0.0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.AiService.KeywordSpottingRequestConfig} returns this
+ */
+proto.AiService.KeywordSpottingRequestConfig.prototype.setThreshold = function(value) {
+  return jspb.Message.setProto3FloatField(this, 2, value);
 };
 
 
@@ -1577,8 +1607,9 @@ proto.AiService.KeywordSpottingFound.prototype.toObject = function(opt_includeIn
  */
 proto.AiService.KeywordSpottingFound.toObject = function(includeInstance, msg) {
   var f, obj = {
-    keyword: jspb.Message.getFieldWithDefault(msg, 1, ""),
-    probability: jspb.Message.getFloatingPointFieldWithDefault(msg, 2, 0.0)
+    id: jspb.Message.getFieldWithDefault(msg, 1, ""),
+    keyword: jspb.Message.getFieldWithDefault(msg, 2, ""),
+    probability: jspb.Message.getFloatingPointFieldWithDefault(msg, 3, 0.0)
   };
 
   if (includeInstance) {
@@ -1617,9 +1648,13 @@ proto.AiService.KeywordSpottingFound.deserializeBinaryFromReader = function(msg,
     switch (field) {
     case 1:
       var value = /** @type {string} */ (reader.readString());
-      msg.setKeyword(value);
+      msg.setId(value);
       break;
     case 2:
+      var value = /** @type {string} */ (reader.readString());
+      msg.setKeyword(value);
+      break;
+    case 3:
       var value = /** @type {number} */ (reader.readFloat());
       msg.setProbability(value);
       break;
@@ -1652,17 +1687,24 @@ proto.AiService.KeywordSpottingFound.prototype.serializeBinary = function() {
  */
 proto.AiService.KeywordSpottingFound.serializeBinaryToWriter = function(message, writer) {
   var f = undefined;
-  f = message.getKeyword();
+  f = message.getId();
   if (f.length > 0) {
     writer.writeString(
       1,
       f
     );
   }
+  f = message.getKeyword();
+  if (f.length > 0) {
+    writer.writeString(
+      2,
+      f
+    );
+  }
   f = message.getProbability();
   if (f !== 0.0) {
     writer.writeFloat(
-      2,
+      3,
       f
     );
   }
@@ -1670,10 +1712,10 @@ proto.AiService.KeywordSpottingFound.serializeBinaryToWriter = function(message,
 
 
 /**
- * optional string keyword = 1;
+ * optional string id = 1;
  * @return {string}
  */
-proto.AiService.KeywordSpottingFound.prototype.getKeyword = function() {
+proto.AiService.KeywordSpottingFound.prototype.getId = function() {
   return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 1, ""));
 };
 
@@ -1682,17 +1724,35 @@ proto.AiService.KeywordSpottingFound.prototype.getKeyword = function() {
  * @param {string} value
  * @return {!proto.AiService.KeywordSpottingFound} returns this
  */
-proto.AiService.KeywordSpottingFound.prototype.setKeyword = function(value) {
+proto.AiService.KeywordSpottingFound.prototype.setId = function(value) {
   return jspb.Message.setProto3StringField(this, 1, value);
 };
 
 
 /**
- * optional float probability = 2;
+ * optional string keyword = 2;
+ * @return {string}
+ */
+proto.AiService.KeywordSpottingFound.prototype.getKeyword = function() {
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 2, ""));
+};
+
+
+/**
+ * @param {string} value
+ * @return {!proto.AiService.KeywordSpottingFound} returns this
+ */
+proto.AiService.KeywordSpottingFound.prototype.setKeyword = function(value) {
+  return jspb.Message.setProto3StringField(this, 2, value);
+};
+
+
+/**
+ * optional float probability = 3;
  * @return {number}
  */
 proto.AiService.KeywordSpottingFound.prototype.getProbability = function() {
-  return /** @type {number} */ (jspb.Message.getFloatingPointFieldWithDefault(this, 2, 0.0));
+  return /** @type {number} */ (jspb.Message.getFloatingPointFieldWithDefault(this, 3, 0.0));
 };
 
 
@@ -1701,7 +1761,7 @@ proto.AiService.KeywordSpottingFound.prototype.getProbability = function() {
  * @return {!proto.AiService.KeywordSpottingFound} returns this
  */
 proto.AiService.KeywordSpottingFound.prototype.setProbability = function(value) {
-  return jspb.Message.setProto3FloatField(this, 2, value);
+  return jspb.Message.setProto3FloatField(this, 3, value);
 };
 
 

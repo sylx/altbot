@@ -95,6 +95,8 @@ export class KeywordSpottingRequestConfig extends jspb.Message {
     getKeywordList(): Array<string>;
     setKeywordList(value: Array<string>): KeywordSpottingRequestConfig;
     addKeyword(value: string, index?: number): string;
+    getThreshold(): number;
+    setThreshold(value: number): KeywordSpottingRequestConfig;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): KeywordSpottingRequestConfig.AsObject;
@@ -109,6 +111,7 @@ export class KeywordSpottingRequestConfig extends jspb.Message {
 export namespace KeywordSpottingRequestConfig {
     export type AsObject = {
         keywordList: Array<string>,
+        threshold: number,
     }
 }
 
@@ -184,6 +187,8 @@ export namespace KeywordSpottingRequest {
 }
 
 export class KeywordSpottingFound extends jspb.Message { 
+    getId(): string;
+    setId(value: string): KeywordSpottingFound;
     getKeyword(): string;
     setKeyword(value: string): KeywordSpottingFound;
     getProbability(): number;
@@ -201,6 +206,7 @@ export class KeywordSpottingFound extends jspb.Message {
 
 export namespace KeywordSpottingFound {
     export type AsObject = {
+        id: string,
         keyword: string,
         probability: number,
     }

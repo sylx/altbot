@@ -161,7 +161,7 @@ export class Tts implements IGuildDependent{
                 do{
                     await entersState(this.getPlayer(), AudioPlayerStatus.Idle, this.abortController.signal)
                 }while(this.playQueue.length > 0)
-                resolve()
+                setTimeout(resolve,500)
             }).on("error", (err) => {
                 console.error(err)
                 reject(err)
