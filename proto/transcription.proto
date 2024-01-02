@@ -92,3 +92,14 @@ message KeywordSpottingResponse {
 	}
 }
 
+// for backward compatibility
+message DiscordOpusPacket {
+	int64 timestamp = 1;
+	bytes data = 2;
+}
+
+message DiscordOpusPacketList {
+	repeated DiscordOpusPacket packets = 1;
+	bool is_final = 3;	
+}
+
