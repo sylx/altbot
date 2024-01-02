@@ -1,14 +1,15 @@
 
 import * as grpc from "@grpc/grpc-js"
 import { GuildMember, VoiceChannel } from "discord.js"
-import { singleton } from "tsyringe"
+import { delay, inject } from "tsyringe"
 import { TranscriptionClient } from "../../grpc/transcription_grpc_pb"
 import { TranscriptionEvent, DiscordOpusPacket, DiscordOpusPacketList } from "../../grpc/transcription_pb"
 import { Writable } from "stream"
 import { EndBehaviorType, VoiceConnection } from "@discordjs/voice"
 import { EventEmitter } from "events"
-import { resolveDependency } from "@utils/functions"
+import { IGuildDependent, guildScoped, resolveDependency } from "@utils/functions"
 import { Logger } from "./Logger"
+import { VoiceChat } from "./VoiceChat"
 
 
 //まとめて送りつけるパケット数(1パケットの長さはだいたい20ms)
@@ -96,45 +97,25 @@ export class TranscriptionWriteStream extends Writable{
 
 type ApiStream = grpc.ClientDuplexStream<DiscordOpusPacketList,TranscriptionEvent>
 
-@singleton()
-export class Transcription {
+@guildScoped()
+export class Transcription implements IGuildDependent{
     public client : TranscriptionClient
     protected emitter: EventEmitter = new EventEmitter()
     protected listeningStatus : {[key: string]: boolean} = {}
 
     constructor(
+        @inject(delay(() => VoiceChat)) private voiceChat: VoiceChat
     ) {
         this.client=new TranscriptionClient(
             `${process.env.AI_SERVICE_HOST}:${process.env.AI_SERVICE_PORT}`,
             grpc.credentials.createInsecure()
           )
     }
-    on(event: string, listener: (...args: any[]) => void) : void{
-        this.emitter.on(event,listener)
+    getGuildId(): string | null {
+        return this.voiceChat.getGuildId()
     }
     protected connectApi(emitter: EventEmitter) : ApiStream{
-        const api_stream = this.client.transcriptionBiStreams()
-        api_stream?.on("error", (err) => {
-            console.error(err)
-        })
-        .on("data", (response : TranscriptionEvent) => {
-            console.log("from server",response.getEventname(),response.getEventdata(),response.getOpusdata().length)
-            try {
-                const data=JSON.parse(response.getEventdata())
-                data.opusData=response.getOpusdata()
-                emitter.emit(
-                        response.getEventname(),
-                        data
-                )
-            } catch (e) {
-                console.error(e)
-            }
-        })
-        .on("end", () => {
-            console.log("api read end")
-            emitter.emit("api_end")
-        })
-        return api_stream
+        return this.client.transcriptionBiStreams()       
     }
 
     async startListen(connection: VoiceConnection,channel: VoiceChannel,prompt: string | Function) : Promise<void>{

@@ -1,17 +1,17 @@
 
 import * as grpc from "@grpc/grpc-js"
 import { delay, inject } from "tsyringe"
-import { GuildMember, VoiceChannel } from "discord.js"
-import { singleton } from "tsyringe"
+import { GuildMember } from "discord.js"
 import { TranscriptionClient } from "../../grpc/transcription_grpc_pb"
-import { KeywordSpottingFoundEventResponse, KeywordSpottingFound,KeywordSpottingRequest,
-     KeywordSpottingRequestAudio, KeywordSpottingRequestConfig, KeywordSpottingResponse } from "../../grpc/transcription_pb"
-import { AudioReceiveStream, EndBehaviorType, VoiceConnection } from "@discordjs/voice"
+import {
+    KeywordSpottingFoundEventResponse, KeywordSpottingFound, KeywordSpottingRequest,
+    KeywordSpottingRequestAudio, KeywordSpottingRequestConfig, KeywordSpottingResponse
+} from "../../grpc/transcription_pb"
+import { AudioReceiveStream, EndBehaviorType } from "@discordjs/voice"
 import { EventEmitter } from "events"
-import { IGuildDependent, guildScoped, resolveDependency } from "@utils/functions"
-import { Logger } from "./Logger"
+import { IGuildDependent, guildScoped } from "@utils/functions"
 import { VoiceChat } from "./VoiceChat"
-import {once} from "events"
+import { once } from "events"
 
 export type KeywordSpottingFoundEvent = {
     keyword: string    
@@ -42,7 +42,6 @@ export class KeywordSpotting implements IGuildDependent{
           )
     }
     protected connectApi() : ApiStream{
-        this.client
         return this.client.keywordSpotting()
     }
     getGuildId(): string | null {

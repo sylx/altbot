@@ -4,17 +4,6 @@
 var grpc = require('@grpc/grpc-js');
 var transcription_pb = require('./transcription_pb.js');
 
-function serialize_AiService_DiscordOpusPacketList(arg) {
-  if (!(arg instanceof transcription_pb.DiscordOpusPacketList)) {
-    throw new Error('Expected argument of type AiService.DiscordOpusPacketList');
-  }
-  return Buffer.from(arg.serializeBinary());
-}
-
-function deserialize_AiService_DiscordOpusPacketList(buffer_arg) {
-  return transcription_pb.DiscordOpusPacketList.deserializeBinary(new Uint8Array(buffer_arg));
-}
-
 function serialize_AiService_KeywordSpottingRequest(arg) {
   if (!(arg instanceof transcription_pb.KeywordSpottingRequest)) {
     throw new Error('Expected argument of type AiService.KeywordSpottingRequest');
@@ -37,29 +26,40 @@ function deserialize_AiService_KeywordSpottingResponse(buffer_arg) {
   return transcription_pb.KeywordSpottingResponse.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
-function serialize_AiService_TranscriptionEvent(arg) {
-  if (!(arg instanceof transcription_pb.TranscriptionEvent)) {
-    throw new Error('Expected argument of type AiService.TranscriptionEvent');
+function serialize_AiService_TranscriptionRequest(arg) {
+  if (!(arg instanceof transcription_pb.TranscriptionRequest)) {
+    throw new Error('Expected argument of type AiService.TranscriptionRequest');
   }
   return Buffer.from(arg.serializeBinary());
 }
 
-function deserialize_AiService_TranscriptionEvent(buffer_arg) {
-  return transcription_pb.TranscriptionEvent.deserializeBinary(new Uint8Array(buffer_arg));
+function deserialize_AiService_TranscriptionRequest(buffer_arg) {
+  return transcription_pb.TranscriptionRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_AiService_TranscriptionResponse(arg) {
+  if (!(arg instanceof transcription_pb.TranscriptionResponse)) {
+    throw new Error('Expected argument of type AiService.TranscriptionResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_AiService_TranscriptionResponse(buffer_arg) {
+  return transcription_pb.TranscriptionResponse.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
 
 var TranscriptionService = exports.TranscriptionService = {
-  transcriptionBiStreams: {
-    path: '/AiService.Transcription/TranscriptionBiStreams',
+  transcription: {
+    path: '/AiService.Transcription/Transcription',
     requestStream: true,
     responseStream: true,
-    requestType: transcription_pb.DiscordOpusPacketList,
-    responseType: transcription_pb.TranscriptionEvent,
-    requestSerialize: serialize_AiService_DiscordOpusPacketList,
-    requestDeserialize: deserialize_AiService_DiscordOpusPacketList,
-    responseSerialize: serialize_AiService_TranscriptionEvent,
-    responseDeserialize: deserialize_AiService_TranscriptionEvent,
+    requestType: transcription_pb.TranscriptionRequest,
+    responseType: transcription_pb.TranscriptionResponse,
+    requestSerialize: serialize_AiService_TranscriptionRequest,
+    requestDeserialize: deserialize_AiService_TranscriptionRequest,
+    responseSerialize: serialize_AiService_TranscriptionResponse,
+    responseDeserialize: deserialize_AiService_TranscriptionResponse,
   },
   keywordSpotting: {
     path: '/AiService.Transcription/KeywordSpotting',

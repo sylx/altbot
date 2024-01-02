@@ -6,87 +6,225 @@
 
 import * as jspb from "google-protobuf";
 
-export class DiscordOpusPacket extends jspb.Message { 
-    getTimestamp(): number;
-    setTimestamp(value: number): DiscordOpusPacket;
-    getData(): Uint8Array | string;
-    getData_asU8(): Uint8Array;
-    getData_asB64(): string;
-    setData(value: Uint8Array | string): DiscordOpusPacket;
+export class TranscriptionRequest extends jspb.Message { 
 
-    serializeBinary(): Uint8Array;
-    toObject(includeInstance?: boolean): DiscordOpusPacket.AsObject;
-    static toObject(includeInstance: boolean, msg: DiscordOpusPacket): DiscordOpusPacket.AsObject;
-    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
-    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-    static serializeBinaryToWriter(message: DiscordOpusPacket, writer: jspb.BinaryWriter): void;
-    static deserializeBinary(bytes: Uint8Array): DiscordOpusPacket;
-    static deserializeBinaryFromReader(message: DiscordOpusPacket, reader: jspb.BinaryReader): DiscordOpusPacket;
-}
+    hasConfig(): boolean;
+    clearConfig(): void;
+    getConfig(): TranscriptionRequestConfig | undefined;
+    setConfig(value?: TranscriptionRequestConfig): TranscriptionRequest;
 
-export namespace DiscordOpusPacket {
-    export type AsObject = {
-        timestamp: number,
-        data: Uint8Array | string,
-    }
-}
-
-export class DiscordOpusPacketList extends jspb.Message { 
-    clearPacketsList(): void;
-    getPacketsList(): Array<DiscordOpusPacket>;
-    setPacketsList(value: Array<DiscordOpusPacket>): DiscordOpusPacketList;
-    addPackets(value?: DiscordOpusPacket, index?: number): DiscordOpusPacket;
-    getSpeakerId(): string;
-    setSpeakerId(value: string): DiscordOpusPacketList;
-    getPrompt(): string;
-    setPrompt(value: string): DiscordOpusPacketList;
+    hasAudio(): boolean;
+    clearAudio(): void;
+    getAudio(): TranscriptionRequestAudio | undefined;
+    setAudio(value?: TranscriptionRequestAudio): TranscriptionRequest;
     getIsFinal(): boolean;
-    setIsFinal(value: boolean): DiscordOpusPacketList;
+    setIsFinal(value: boolean): TranscriptionRequest;
+
+    getRequestOneofCase(): TranscriptionRequest.RequestOneofCase;
 
     serializeBinary(): Uint8Array;
-    toObject(includeInstance?: boolean): DiscordOpusPacketList.AsObject;
-    static toObject(includeInstance: boolean, msg: DiscordOpusPacketList): DiscordOpusPacketList.AsObject;
+    toObject(includeInstance?: boolean): TranscriptionRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: TranscriptionRequest): TranscriptionRequest.AsObject;
     static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
     static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-    static serializeBinaryToWriter(message: DiscordOpusPacketList, writer: jspb.BinaryWriter): void;
-    static deserializeBinary(bytes: Uint8Array): DiscordOpusPacketList;
-    static deserializeBinaryFromReader(message: DiscordOpusPacketList, reader: jspb.BinaryReader): DiscordOpusPacketList;
+    static serializeBinaryToWriter(message: TranscriptionRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): TranscriptionRequest;
+    static deserializeBinaryFromReader(message: TranscriptionRequest, reader: jspb.BinaryReader): TranscriptionRequest;
 }
 
-export namespace DiscordOpusPacketList {
+export namespace TranscriptionRequest {
     export type AsObject = {
-        packetsList: Array<DiscordOpusPacket.AsObject>,
-        speakerId: string,
-        prompt: string,
+        config?: TranscriptionRequestConfig.AsObject,
+        audio?: TranscriptionRequestAudio.AsObject,
         isFinal: boolean,
     }
+
+    export enum RequestOneofCase {
+        REQUEST_ONEOF_NOT_SET = 0,
+        CONFIG = 1,
+        AUDIO = 2,
+    }
+
 }
 
-export class TranscriptionEvent extends jspb.Message { 
-    getEventname(): string;
-    setEventname(value: string): TranscriptionEvent;
-    getEventdata(): string;
-    setEventdata(value: string): TranscriptionEvent;
+export class TranscriptionRequestConfig extends jspb.Message { 
+    getPrompt(): string;
+    setPrompt(value: string): TranscriptionRequestConfig;
+
+    hasKwsConfig(): boolean;
+    clearKwsConfig(): void;
+    getKwsConfig(): KeywordSpottingRequestConfig | undefined;
+    setKwsConfig(value?: KeywordSpottingRequestConfig): TranscriptionRequestConfig;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): TranscriptionRequestConfig.AsObject;
+    static toObject(includeInstance: boolean, msg: TranscriptionRequestConfig): TranscriptionRequestConfig.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: TranscriptionRequestConfig, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): TranscriptionRequestConfig;
+    static deserializeBinaryFromReader(message: TranscriptionRequestConfig, reader: jspb.BinaryReader): TranscriptionRequestConfig;
+}
+
+export namespace TranscriptionRequestConfig {
+    export type AsObject = {
+        prompt: string,
+        kwsConfig?: KeywordSpottingRequestConfig.AsObject,
+    }
+}
+
+export class TranscriptionRequestAudio extends jspb.Message { 
+    clearDataList(): void;
+    getDataList(): Array<Uint8Array | string>;
+    getDataList_asU8(): Array<Uint8Array>;
+    getDataList_asB64(): Array<string>;
+    setDataList(value: Array<Uint8Array | string>): TranscriptionRequestAudio;
+    addData(value: Uint8Array | string, index?: number): Uint8Array | string;
+    getSpeakerId(): string;
+    setSpeakerId(value: string): TranscriptionRequestAudio;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): TranscriptionRequestAudio.AsObject;
+    static toObject(includeInstance: boolean, msg: TranscriptionRequestAudio): TranscriptionRequestAudio.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: TranscriptionRequestAudio, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): TranscriptionRequestAudio;
+    static deserializeBinaryFromReader(message: TranscriptionRequestAudio, reader: jspb.BinaryReader): TranscriptionRequestAudio;
+}
+
+export namespace TranscriptionRequestAudio {
+    export type AsObject = {
+        dataList: Array<Uint8Array | string>,
+        speakerId: string,
+    }
+}
+
+export class TranscriptionResponse extends jspb.Message { 
+
+    hasConfig(): boolean;
+    clearConfig(): void;
+    getConfig(): TranscriptionConfigResponse | undefined;
+    setConfig(value?: TranscriptionConfigResponse): TranscriptionResponse;
+
+    hasEvent(): boolean;
+    clearEvent(): void;
+    getEvent(): TranscriptionEventResponse | undefined;
+    setEvent(value?: TranscriptionEventResponse): TranscriptionResponse;
+
+    hasVadEvent(): boolean;
+    clearVadEvent(): void;
+    getVadEvent(): TranscriptionVADEventResponse | undefined;
+    setVadEvent(value?: TranscriptionVADEventResponse): TranscriptionResponse;
+
+    getResponseOneofCase(): TranscriptionResponse.ResponseOneofCase;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): TranscriptionResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: TranscriptionResponse): TranscriptionResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: TranscriptionResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): TranscriptionResponse;
+    static deserializeBinaryFromReader(message: TranscriptionResponse, reader: jspb.BinaryReader): TranscriptionResponse;
+}
+
+export namespace TranscriptionResponse {
+    export type AsObject = {
+        config?: TranscriptionConfigResponse.AsObject,
+        event?: TranscriptionEventResponse.AsObject,
+        vadEvent?: TranscriptionVADEventResponse.AsObject,
+    }
+
+    export enum ResponseOneofCase {
+        RESPONSE_ONEOF_NOT_SET = 0,
+        CONFIG = 1,
+        EVENT = 2,
+        VAD_EVENT = 3,
+    }
+
+}
+
+export class TranscriptionConfigResponse extends jspb.Message { 
+    getSuccess(): boolean;
+    setSuccess(value: boolean): TranscriptionConfigResponse;
+    getPrompt(): string;
+    setPrompt(value: string): TranscriptionConfigResponse;
+
+    hasKwsConfig(): boolean;
+    clearKwsConfig(): void;
+    getKwsConfig(): KeywordSpottingConfigResponse | undefined;
+    setKwsConfig(value?: KeywordSpottingConfigResponse): TranscriptionConfigResponse;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): TranscriptionConfigResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: TranscriptionConfigResponse): TranscriptionConfigResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: TranscriptionConfigResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): TranscriptionConfigResponse;
+    static deserializeBinaryFromReader(message: TranscriptionConfigResponse, reader: jspb.BinaryReader): TranscriptionConfigResponse;
+}
+
+export namespace TranscriptionConfigResponse {
+    export type AsObject = {
+        success: boolean,
+        prompt: string,
+        kwsConfig?: KeywordSpottingConfigResponse.AsObject,
+    }
+}
+
+export class TranscriptionEventResponse extends jspb.Message { 
+    getText(): string;
+    setText(value: string): TranscriptionEventResponse;
+    getProbability(): number;
+    setProbability(value: number): TranscriptionEventResponse;
+    getSpeakerId(): string;
+    setSpeakerId(value: string): TranscriptionEventResponse;
     getOpusdata(): Uint8Array | string;
     getOpusdata_asU8(): Uint8Array;
     getOpusdata_asB64(): string;
-    setOpusdata(value: Uint8Array | string): TranscriptionEvent;
+    setOpusdata(value: Uint8Array | string): TranscriptionEventResponse;
 
     serializeBinary(): Uint8Array;
-    toObject(includeInstance?: boolean): TranscriptionEvent.AsObject;
-    static toObject(includeInstance: boolean, msg: TranscriptionEvent): TranscriptionEvent.AsObject;
+    toObject(includeInstance?: boolean): TranscriptionEventResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: TranscriptionEventResponse): TranscriptionEventResponse.AsObject;
     static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
     static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-    static serializeBinaryToWriter(message: TranscriptionEvent, writer: jspb.BinaryWriter): void;
-    static deserializeBinary(bytes: Uint8Array): TranscriptionEvent;
-    static deserializeBinaryFromReader(message: TranscriptionEvent, reader: jspb.BinaryReader): TranscriptionEvent;
+    static serializeBinaryToWriter(message: TranscriptionEventResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): TranscriptionEventResponse;
+    static deserializeBinaryFromReader(message: TranscriptionEventResponse, reader: jspb.BinaryReader): TranscriptionEventResponse;
 }
 
-export namespace TranscriptionEvent {
+export namespace TranscriptionEventResponse {
     export type AsObject = {
-        eventname: string,
-        eventdata: string,
+        text: string,
+        probability: number,
+        speakerId: string,
         opusdata: Uint8Array | string,
+    }
+}
+
+export class TranscriptionVADEventResponse extends jspb.Message { 
+    getIsSpeech(): boolean;
+    setIsSpeech(value: boolean): TranscriptionVADEventResponse;
+    getSpeakerId(): string;
+    setSpeakerId(value: string): TranscriptionVADEventResponse;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): TranscriptionVADEventResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: TranscriptionVADEventResponse): TranscriptionVADEventResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: TranscriptionVADEventResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): TranscriptionVADEventResponse;
+    static deserializeBinaryFromReader(message: TranscriptionVADEventResponse, reader: jspb.BinaryReader): TranscriptionVADEventResponse;
+}
+
+export namespace TranscriptionVADEventResponse {
+    export type AsObject = {
+        isSpeech: boolean,
+        speakerId: string,
     }
 }
 

@@ -2,27 +2,52 @@ syntax = "proto3";
 package AiService;
 
 service Transcription {
-	rpc TranscriptionBiStreams (stream DiscordOpusPacketList) returns (stream TranscriptionEvent);
+	rpc Transcription(stream TranscriptionRequest) returns (stream TranscriptionResponse);
 	rpc KeywordSpotting (stream KeywordSpottingRequest) returns (stream KeywordSpottingResponse);
 }
 
-message DiscordOpusPacket {
-	int64 timestamp = 1;
-	bytes data = 2;
+message TranscriptionRequest {
+	oneof request_oneof {
+		TranscriptionRequestConfig config = 1;
+		TranscriptionRequestAudio audio = 2;
+	}
+	bool is_final = 3;	
 }
-
-message DiscordOpusPacketList {
-	repeated DiscordOpusPacket packets = 1;
+message TranscriptionRequestConfig {
+	string prompt = 1;
+	KeywordSpottingRequestConfig kws_config = 2;
+}
+message TranscriptionRequestAudio {	
+	repeated bytes data = 1;
 	string speaker_id = 2;
-	string prompt = 3;
-	bool is_final = 4;
 }
 
-message TranscriptionEvent {
-	string eventName = 1;
-	string eventData = 2;
-	bytes opusData = 3;
+message TranscriptionResponse {
+	oneof response_oneof {
+		TranscriptionConfigResponse config = 1;
+		TranscriptionEventResponse event = 2;
+		TranscriptionVADEventResponse vad_event = 3;
+	}
 }
+
+message TranscriptionConfigResponse {
+	bool success = 1;
+	string prompt = 2;
+	KeywordSpottingConfigResponse kws_config = 3;
+}
+
+message TranscriptionEventResponse {
+	string text = 1;
+	float probability = 2;
+	string speaker_id = 3;	
+	bytes opusData = 4;
+}
+
+message TranscriptionVADEventResponse {
+	bool is_speech = 1;
+	string speaker_id = 2;
+}
+
 
 message KeywordSpottingRequestConfig {
 	repeated string keyword = 1;

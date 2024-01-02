@@ -14,10 +14,10 @@ class TranscriptionStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.TranscriptionBiStreams = channel.stream_stream(
-                '/AiService.Transcription/TranscriptionBiStreams',
-                request_serializer=transcription__pb2.DiscordOpusPacketList.SerializeToString,
-                response_deserializer=transcription__pb2.TranscriptionEvent.FromString,
+        self.Transcription = channel.stream_stream(
+                '/AiService.Transcription/Transcription',
+                request_serializer=transcription__pb2.TranscriptionRequest.SerializeToString,
+                response_deserializer=transcription__pb2.TranscriptionResponse.FromString,
                 )
         self.KeywordSpotting = channel.stream_stream(
                 '/AiService.Transcription/KeywordSpotting',
@@ -29,7 +29,7 @@ class TranscriptionStub(object):
 class TranscriptionServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def TranscriptionBiStreams(self, request_iterator, context):
+    def Transcription(self, request_iterator, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -44,10 +44,10 @@ class TranscriptionServicer(object):
 
 def add_TranscriptionServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'TranscriptionBiStreams': grpc.stream_stream_rpc_method_handler(
-                    servicer.TranscriptionBiStreams,
-                    request_deserializer=transcription__pb2.DiscordOpusPacketList.FromString,
-                    response_serializer=transcription__pb2.TranscriptionEvent.SerializeToString,
+            'Transcription': grpc.stream_stream_rpc_method_handler(
+                    servicer.Transcription,
+                    request_deserializer=transcription__pb2.TranscriptionRequest.FromString,
+                    response_serializer=transcription__pb2.TranscriptionResponse.SerializeToString,
             ),
             'KeywordSpotting': grpc.stream_stream_rpc_method_handler(
                     servicer.KeywordSpotting,
@@ -65,7 +65,7 @@ class Transcription(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def TranscriptionBiStreams(request_iterator,
+    def Transcription(request_iterator,
             target,
             options=(),
             channel_credentials=None,
@@ -75,9 +75,9 @@ class Transcription(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.stream_stream(request_iterator, target, '/AiService.Transcription/TranscriptionBiStreams',
-            transcription__pb2.DiscordOpusPacketList.SerializeToString,
-            transcription__pb2.TranscriptionEvent.FromString,
+        return grpc.experimental.stream_stream(request_iterator, target, '/AiService.Transcription/Transcription',
+            transcription__pb2.TranscriptionRequest.SerializeToString,
+            transcription__pb2.TranscriptionResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
