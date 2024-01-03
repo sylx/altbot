@@ -25,7 +25,8 @@
     "generate": "grpc_tools_node_protoc --js_out=import_style=commonjs,binary:./grpc --grpc_out=grpc_js:./grpc --plugin=protoc-gen-ts=./node_modules/.bin/protoc-gen-ts --ts_out=grpc_js:./grpc -I ../proto ../proto/*.proto",
     "test_packets": "node -r @swc-node/register test_packets.ts",
     "test_tts": "node -r @swc-node/register test_tts.ts",
-    "test_kw": "node -r @swc-node/register test_kw.ts"
+    "test_kw": "node -r @swc-node/register test_kw.ts",
+    "test_transcription": "node -r @swc-node/register test_transcription.ts"
   },
   "dependencies": {
     "@discordjs/opus": "^0.8.0",

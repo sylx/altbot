@@ -16,6 +16,7 @@ message TranscriptionRequest {
 message TranscriptionRequestConfig {
 	string prompt = 1;
 	KeywordSpottingRequestConfig kws_config = 2;
+	bool return_opus = 3;
 }
 message TranscriptionRequestAudio {	
 	repeated bytes data = 1;
@@ -26,7 +27,6 @@ message TranscriptionResponse {
 	oneof response_oneof {
 		TranscriptionConfigResponse config = 1;
 		TranscriptionEventResponse event = 2;
-		TranscriptionVADEventResponse vad_event = 3;
 	}
 }
 
@@ -41,11 +41,7 @@ message TranscriptionEventResponse {
 	float probability = 2;
 	string speaker_id = 3;	
 	bytes opusData = 4;
-}
-
-message TranscriptionVADEventResponse {
-	bool is_speech = 1;
-	string speaker_id = 2;
+	string info = 5; // json
 }
 
 
@@ -100,6 +96,7 @@ message DiscordOpusPacket {
 
 message DiscordOpusPacketList {
 	repeated DiscordOpusPacket packets = 1;
-	bool is_final = 3;	
+	string speaker_id = 2;
+	string prompt = 3;
+	bool is_final = 4;
 }
-

@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "server.py",
             "console": "integratedTerminal",
-            "justMyCode": true,
+            "justMyCode": false,
             "cwd": "${workspaceFolder}/ai-service"
         }
     ]

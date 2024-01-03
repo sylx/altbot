@@ -55,6 +55,8 @@ export class TranscriptionRequestConfig extends jspb.Message {
     clearKwsConfig(): void;
     getKwsConfig(): KeywordSpottingRequestConfig | undefined;
     setKwsConfig(value?: KeywordSpottingRequestConfig): TranscriptionRequestConfig;
+    getReturnOpus(): boolean;
+    setReturnOpus(value: boolean): TranscriptionRequestConfig;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): TranscriptionRequestConfig.AsObject;
@@ -70,6 +72,7 @@ export namespace TranscriptionRequestConfig {
     export type AsObject = {
         prompt: string,
         kwsConfig?: KeywordSpottingRequestConfig.AsObject,
+        returnOpus: boolean,
     }
 }
 
@@ -112,11 +115,6 @@ export class TranscriptionResponse extends jspb.Message {
     getEvent(): TranscriptionEventResponse | undefined;
     setEvent(value?: TranscriptionEventResponse): TranscriptionResponse;
 
-    hasVadEvent(): boolean;
-    clearVadEvent(): void;
-    getVadEvent(): TranscriptionVADEventResponse | undefined;
-    setVadEvent(value?: TranscriptionVADEventResponse): TranscriptionResponse;
-
     getResponseOneofCase(): TranscriptionResponse.ResponseOneofCase;
 
     serializeBinary(): Uint8Array;
@@ -133,14 +131,12 @@ export namespace TranscriptionResponse {
     export type AsObject = {
         config?: TranscriptionConfigResponse.AsObject,
         event?: TranscriptionEventResponse.AsObject,
-        vadEvent?: TranscriptionVADEventResponse.AsObject,
     }
 
     export enum ResponseOneofCase {
         RESPONSE_ONEOF_NOT_SET = 0,
         CONFIG = 1,
         EVENT = 2,
-        VAD_EVENT = 3,
     }
 
 }
@@ -185,6 +181,8 @@ export class TranscriptionEventResponse extends jspb.Message {
     getOpusdata_asU8(): Uint8Array;
     getOpusdata_asB64(): string;
     setOpusdata(value: Uint8Array | string): TranscriptionEventResponse;
+    getInfo(): string;
+    setInfo(value: string): TranscriptionEventResponse;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): TranscriptionEventResponse.AsObject;
@@ -202,29 +200,7 @@ export namespace TranscriptionEventResponse {
         probability: number,
         speakerId: string,
         opusdata: Uint8Array | string,
-    }
-}
-
-export class TranscriptionVADEventResponse extends jspb.Message { 
-    getIsSpeech(): boolean;
-    setIsSpeech(value: boolean): TranscriptionVADEventResponse;
-    getSpeakerId(): string;
-    setSpeakerId(value: string): TranscriptionVADEventResponse;
-
-    serializeBinary(): Uint8Array;
-    toObject(includeInstance?: boolean): TranscriptionVADEventResponse.AsObject;
-    static toObject(includeInstance: boolean, msg: TranscriptionVADEventResponse): TranscriptionVADEventResponse.AsObject;
-    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
-    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-    static serializeBinaryToWriter(message: TranscriptionVADEventResponse, writer: jspb.BinaryWriter): void;
-    static deserializeBinary(bytes: Uint8Array): TranscriptionVADEventResponse;
-    static deserializeBinaryFromReader(message: TranscriptionVADEventResponse, reader: jspb.BinaryReader): TranscriptionVADEventResponse;
-}
-
-export namespace TranscriptionVADEventResponse {
-    export type AsObject = {
-        isSpeech: boolean,
-        speakerId: string,
+        info: string,
     }
 }
 
@@ -471,6 +447,10 @@ export class DiscordOpusPacketList extends jspb.Message {
     getPacketsList(): Array<DiscordOpusPacket>;
     setPacketsList(value: Array<DiscordOpusPacket>): DiscordOpusPacketList;
     addPackets(value?: DiscordOpusPacket, index?: number): DiscordOpusPacket;
+    getSpeakerId(): string;
+    setSpeakerId(value: string): DiscordOpusPacketList;
+    getPrompt(): string;
+    setPrompt(value: string): DiscordOpusPacketList;
     getIsFinal(): boolean;
     setIsFinal(value: boolean): DiscordOpusPacketList;
 
@@ -487,6 +467,8 @@ export class DiscordOpusPacketList extends jspb.Message {
 export namespace DiscordOpusPacketList {
     export type AsObject = {
         packetsList: Array<DiscordOpusPacket.AsObject>,
+        speakerId: string,
+        prompt: string,
         isFinal: boolean,
     }
 }
