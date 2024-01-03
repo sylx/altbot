@@ -38,10 +38,17 @@ message TranscriptionConfigResponse {
 
 message TranscriptionEventResponse {
 	string text = 1;
-	float probability = 2;
-	string speaker_id = 3;	
-	bytes opusData = 4;
-	string info = 5; // json
+	repeated TranscriptionEventWord words = 2;
+	string speaker_id = 3;
+	float probability = 4;
+	bytes opusData = 5;
+	string info = 6; // json
+}
+
+message TranscriptionEventWord {
+	string word = 1;
+	float probability = 2;	
+	int64 timestamp = 3;
 }
 
 
@@ -53,7 +60,6 @@ message KeywordSpottingRequestConfig {
 message KeywordSpottingRequestAudio {
 	repeated bytes data = 1;
 	string speaker_id = 2;
-	int64 timestamp = 3;
 }
 
 message KeywordSpottingRequest {

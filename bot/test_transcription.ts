@@ -24,18 +24,26 @@ if(!api_stream){
 }
 
 let opus_index=0
+let whole_text : string[]=[]
+let probs : number[]=[]
+
 async function receiveResponse(){
     for await (const response of api_stream){
         if(response.hasEvent()){
             const event=response.getEvent() as TranscriptionEventResponse
             const opus_data=event.getOpusdata_asU8()
-            const filename=`opus-${opus_index++}.ogg`
-            fs.writeFile(filename,opus_data,(err)=>{
-                console.log("write",filename)
-            })
+            if(opus_data && opus_data.length > 0){
+                const filename=`opus-${opus_index++}.ogg`
+                fs.writeFile(filename,opus_data,(err)=>{
+                    console.log("write",filename)
+                })
+            }
+            whole_text.push(event.getText())
+            probs.push(event.getProbability())
             console.log("event",{
                 speaker_id: event.getSpeakerId(),
                 text: event.getText(),
+                words: event.getWordsList().map(word=>word.toObject()),
                 info: JSON.parse(event.getInfo())
             })
         }
@@ -67,7 +75,7 @@ async function config() : Promise<void>{
     config.setPrompt(prompt)
     kw_config.setKeywordList(keywords)
     config.setKwsConfig(kw_config)
-    config.setReturnOpus(true)
+    config.setReturnOpus(false)
     req.setConfig(config)
     api_stream.write(req)
     const response=await (once(api_stream,"data") as Promise<TranscriptionConfigResponse[]>)
@@ -83,7 +91,7 @@ async function main(){
     await config()
     //受信ループを開始
     receiveResponse()    
-    const packets=generatePackets("dump-jigoku3dayu-1696511950609.bin")
+    const packets=generatePackets("./dump-jigoku3dayu-1696551798341.bin")
     for(let i in packets){
         const packet=packets[i]
         const req=new TranscriptionRequest()
@@ -96,8 +104,9 @@ async function main(){
         process.stderr.write(".")
         await wait(20)
     }
-    await wait(500)
+    await wait(2000)
     api_stream.end()
+    console.log("end",whole_text.join("_"),probs.reduce((a,b)=>a+b,0)/probs.length)
 }
 
 main()

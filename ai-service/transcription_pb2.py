@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13transcription.proto\x12\tAiService\"\xa9\x01\n\x14TranscriptionRequest\x12\x37\n\x06\x63onfig\x18\x01 \x01(\x0b\x32%.AiService.TranscriptionRequestConfigH\x00\x12\x35\n\x05\x61udio\x18\x02 \x01(\x0b\x32$.AiService.TranscriptionRequestAudioH\x00\x12\x10\n\x08is_final\x18\x03 \x01(\x08\x42\x0f\n\rrequest_oneof\"~\n\x1aTranscriptionRequestConfig\x12\x0e\n\x06prompt\x18\x01 \x01(\t\x12;\n\nkws_config\x18\x02 \x01(\x0b\x32\'.AiService.KeywordSpottingRequestConfig\x12\x13\n\x0breturn_opus\x18\x03 \x01(\x08\"=\n\x19TranscriptionRequestAudio\x12\x0c\n\x04\x64\x61ta\x18\x01 \x03(\x0c\x12\x12\n\nspeaker_id\x18\x02 \x01(\t\"\x9b\x01\n\x15TranscriptionResponse\x12\x38\n\x06\x63onfig\x18\x01 \x01(\x0b\x32&.AiService.TranscriptionConfigResponseH\x00\x12\x36\n\x05\x65vent\x18\x02 \x01(\x0b\x32%.AiService.TranscriptionEventResponseH\x00\x42\x10\n\x0eresponse_oneof\"|\n\x1bTranscriptionConfigResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0e\n\x06prompt\x18\x02 \x01(\t\x12<\n\nkws_config\x18\x03 \x01(\x0b\x32(.AiService.KeywordSpottingConfigResponse\"s\n\x1aTranscriptionEventResponse\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\x13\n\x0bprobability\x18\x02 \x01(\x02\x12\x12\n\nspeaker_id\x18\x03 \x01(\t\x12\x10\n\x08opusData\x18\x04 \x01(\x0c\x12\x0c\n\x04info\x18\x05 \x01(\t\"B\n\x1cKeywordSpottingRequestConfig\x12\x0f\n\x07keyword\x18\x01 \x03(\t\x12\x11\n\tthreshold\x18\x02 \x01(\x02\"R\n\x1bKeywordSpottingRequestAudio\x12\x0c\n\x04\x64\x61ta\x18\x01 \x03(\x0c\x12\x12\n\nspeaker_id\x18\x02 \x01(\t\x12\x11\n\ttimestamp\x18\x03 \x01(\x03\"\xaf\x01\n\x16KeywordSpottingRequest\x12\x39\n\x06\x63onfig\x18\x01 \x01(\x0b\x32\'.AiService.KeywordSpottingRequestConfigH\x00\x12\x37\n\x05\x61udio\x18\x02 \x01(\x0b\x32&.AiService.KeywordSpottingRequestAudioH\x00\x12\x10\n\x08is_final\x18\x03 \x01(\x08\x42\x0f\n\rrequest_oneof\"H\n\x14KeywordSpottingFound\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0f\n\x07keyword\x18\x02 \x01(\t\x12\x13\n\x0bprobability\x18\x03 \x01(\x02\"}\n!KeywordSpottingFoundEventResponse\x12.\n\x05\x66ound\x18\x01 \x03(\x0b\x32\x1f.AiService.KeywordSpottingFound\x12\x12\n\nspeaker_id\x18\x02 \x01(\t\x12\x14\n\x0c\x64\x65\x63oder_text\x18\x03 \x01(\t\"A\n\x1dKeywordSpottingConfigResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07keyword\x18\x02 \x03(\t\"\xa6\x01\n\x17KeywordSpottingResponse\x12=\n\x05\x66ound\x18\x01 \x01(\x0b\x32,.AiService.KeywordSpottingFoundEventResponseH\x00\x12:\n\x06\x63onfig\x18\x02 \x01(\x0b\x32(.AiService.KeywordSpottingConfigResponseH\x00\x42\x10\n\x0eresponse_oneof\"4\n\x11\x44iscordOpusPacket\x12\x11\n\ttimestamp\x18\x01 \x01(\x03\x12\x0c\n\x04\x64\x61ta\x18\x02 \x01(\x0c\"|\n\x15\x44iscordOpusPacketList\x12-\n\x07packets\x18\x01 \x03(\x0b\x32\x1c.AiService.DiscordOpusPacket\x12\x12\n\nspeaker_id\x18\x02 \x01(\t\x12\x0e\n\x06prompt\x18\x03 \x01(\t\x12\x10\n\x08is_final\x18\x04 \x01(\x08\x32\xc5\x01\n\rTranscription\x12V\n\rTranscription\x12\x1f.AiService.TranscriptionRequest\x1a .AiService.TranscriptionResponse(\x01\x30\x01\x12\\\n\x0fKeywordSpotting\x12!.AiService.KeywordSpottingRequest\x1a\".AiService.KeywordSpottingResponse(\x01\x30\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13transcription.proto\x12\tAiService\"\xa9\x01\n\x14TranscriptionRequest\x12\x37\n\x06\x63onfig\x18\x01 \x01(\x0b\x32%.AiService.TranscriptionRequestConfigH\x00\x12\x35\n\x05\x61udio\x18\x02 \x01(\x0b\x32$.AiService.TranscriptionRequestAudioH\x00\x12\x10\n\x08is_final\x18\x03 \x01(\x08\x42\x0f\n\rrequest_oneof\"~\n\x1aTranscriptionRequestConfig\x12\x0e\n\x06prompt\x18\x01 \x01(\t\x12;\n\nkws_config\x18\x02 \x01(\x0b\x32\'.AiService.KeywordSpottingRequestConfig\x12\x13\n\x0breturn_opus\x18\x03 \x01(\x08\"=\n\x19TranscriptionRequestAudio\x12\x0c\n\x04\x64\x61ta\x18\x01 \x03(\x0c\x12\x12\n\nspeaker_id\x18\x02 \x01(\t\"\x9b\x01\n\x15TranscriptionResponse\x12\x38\n\x06\x63onfig\x18\x01 \x01(\x0b\x32&.AiService.TranscriptionConfigResponseH\x00\x12\x36\n\x05\x65vent\x18\x02 \x01(\x0b\x32%.AiService.TranscriptionEventResponseH\x00\x42\x10\n\x0eresponse_oneof\"|\n\x1bTranscriptionConfigResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0e\n\x06prompt\x18\x02 \x01(\t\x12<\n\nkws_config\x18\x03 \x01(\x0b\x32(.AiService.KeywordSpottingConfigResponse\"\xa5\x01\n\x1aTranscriptionEventResponse\x12\x0c\n\x04text\x18\x01 \x01(\t\x12\x30\n\x05words\x18\x02 \x03(\x0b\x32!.AiService.TranscriptionEventWord\x12\x12\n\nspeaker_id\x18\x03 \x01(\t\x12\x13\n\x0bprobability\x18\x04 \x01(\x02\x12\x10\n\x08opusData\x18\x05 \x01(\x0c\x12\x0c\n\x04info\x18\x06 \x01(\t\"N\n\x16TranscriptionEventWord\x12\x0c\n\x04word\x18\x01 \x01(\t\x12\x13\n\x0bprobability\x18\x02 \x01(\x02\x12\x11\n\ttimestamp\x18\x03 \x01(\x03\"B\n\x1cKeywordSpottingRequestConfig\x12\x0f\n\x07keyword\x18\x01 \x03(\t\x12\x11\n\tthreshold\x18\x02 \x01(\x02\"?\n\x1bKeywordSpottingRequestAudio\x12\x0c\n\x04\x64\x61ta\x18\x01 \x03(\x0c\x12\x12\n\nspeaker_id\x18\x02 \x01(\t\"\xaf\x01\n\x16KeywordSpottingRequest\x12\x39\n\x06\x63onfig\x18\x01 \x01(\x0b\x32\'.AiService.KeywordSpottingRequestConfigH\x00\x12\x37\n\x05\x61udio\x18\x02 \x01(\x0b\x32&.AiService.KeywordSpottingRequestAudioH\x00\x12\x10\n\x08is_final\x18\x03 \x01(\x08\x42\x0f\n\rrequest_oneof\"H\n\x14KeywordSpottingFound\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0f\n\x07keyword\x18\x02 \x01(\t\x12\x13\n\x0bprobability\x18\x03 \x01(\x02\"}\n!KeywordSpottingFoundEventResponse\x12.\n\x05\x66ound\x18\x01 \x03(\x0b\x32\x1f.AiService.KeywordSpottingFound\x12\x12\n\nspeaker_id\x18\x02 \x01(\t\x12\x14\n\x0c\x64\x65\x63oder_text\x18\x03 \x01(\t\"A\n\x1dKeywordSpottingConfigResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x0f\n\x07keyword\x18\x02 \x03(\t\"\xa6\x01\n\x17KeywordSpottingResponse\x12=\n\x05\x66ound\x18\x01 \x01(\x0b\x32,.AiService.KeywordSpottingFoundEventResponseH\x00\x12:\n\x06\x63onfig\x18\x02 \x01(\x0b\x32(.AiService.KeywordSpottingConfigResponseH\x00\x42\x10\n\x0eresponse_oneof\"4\n\x11\x44iscordOpusPacket\x12\x11\n\ttimestamp\x18\x01 \x01(\x03\x12\x0c\n\x04\x64\x61ta\x18\x02 \x01(\x0c\"|\n\x15\x44iscordOpusPacketList\x12-\n\x07packets\x18\x01 \x03(\x0b\x32\x1c.AiService.DiscordOpusPacket\x12\x12\n\nspeaker_id\x18\x02 \x01(\t\x12\x0e\n\x06prompt\x18\x03 \x01(\t\x12\x10\n\x08is_final\x18\x04 \x01(\x08\x32\xc5\x01\n\rTranscription\x12V\n\rTranscription\x12\x1f.AiService.TranscriptionRequest\x1a .AiService.TranscriptionResponse(\x01\x30\x01\x12\\\n\x0fKeywordSpotting\x12!.AiService.KeywordSpottingRequest\x1a\".AiService.KeywordSpottingResponse(\x01\x30\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -31,26 +31,28 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['_TRANSCRIPTIONRESPONSE']._serialized_end=553
   _globals['_TRANSCRIPTIONCONFIGRESPONSE']._serialized_start=555
   _globals['_TRANSCRIPTIONCONFIGRESPONSE']._serialized_end=679
-  _globals['_TRANSCRIPTIONEVENTRESPONSE']._serialized_start=681
-  _globals['_TRANSCRIPTIONEVENTRESPONSE']._serialized_end=796
-  _globals['_KEYWORDSPOTTINGREQUESTCONFIG']._serialized_start=798
-  _globals['_KEYWORDSPOTTINGREQUESTCONFIG']._serialized_end=864
-  _globals['_KEYWORDSPOTTINGREQUESTAUDIO']._serialized_start=866
-  _globals['_KEYWORDSPOTTINGREQUESTAUDIO']._serialized_end=948
-  _globals['_KEYWORDSPOTTINGREQUEST']._serialized_start=951
-  _globals['_KEYWORDSPOTTINGREQUEST']._serialized_end=1126
-  _globals['_KEYWORDSPOTTINGFOUND']._serialized_start=1128
-  _globals['_KEYWORDSPOTTINGFOUND']._serialized_end=1200
-  _globals['_KEYWORDSPOTTINGFOUNDEVENTRESPONSE']._serialized_start=1202
-  _globals['_KEYWORDSPOTTINGFOUNDEVENTRESPONSE']._serialized_end=1327
-  _globals['_KEYWORDSPOTTINGCONFIGRESPONSE']._serialized_start=1329
-  _globals['_KEYWORDSPOTTINGCONFIGRESPONSE']._serialized_end=1394
-  _globals['_KEYWORDSPOTTINGRESPONSE']._serialized_start=1397
-  _globals['_KEYWORDSPOTTINGRESPONSE']._serialized_end=1563
-  _globals['_DISCORDOPUSPACKET']._serialized_start=1565
-  _globals['_DISCORDOPUSPACKET']._serialized_end=1617
-  _globals['_DISCORDOPUSPACKETLIST']._serialized_start=1619
-  _globals['_DISCORDOPUSPACKETLIST']._serialized_end=1743
-  _globals['_TRANSCRIPTION']._serialized_start=1746
-  _globals['_TRANSCRIPTION']._serialized_end=1943
+  _globals['_TRANSCRIPTIONEVENTRESPONSE']._serialized_start=682
+  _globals['_TRANSCRIPTIONEVENTRESPONSE']._serialized_end=847
+  _globals['_TRANSCRIPTIONEVENTWORD']._serialized_start=849
+  _globals['_TRANSCRIPTIONEVENTWORD']._serialized_end=927
+  _globals['_KEYWORDSPOTTINGREQUESTCONFIG']._serialized_start=929
+  _globals['_KEYWORDSPOTTINGREQUESTCONFIG']._serialized_end=995
+  _globals['_KEYWORDSPOTTINGREQUESTAUDIO']._serialized_start=997
+  _globals['_KEYWORDSPOTTINGREQUESTAUDIO']._serialized_end=1060
+  _globals['_KEYWORDSPOTTINGREQUEST']._serialized_start=1063
+  _globals['_KEYWORDSPOTTINGREQUEST']._serialized_end=1238
+  _globals['_KEYWORDSPOTTINGFOUND']._serialized_start=1240
+  _globals['_KEYWORDSPOTTINGFOUND']._serialized_end=1312
+  _globals['_KEYWORDSPOTTINGFOUNDEVENTRESPONSE']._serialized_start=1314
+  _globals['_KEYWORDSPOTTINGFOUNDEVENTRESPONSE']._serialized_end=1439
+  _globals['_KEYWORDSPOTTINGCONFIGRESPONSE']._serialized_start=1441
+  _globals['_KEYWORDSPOTTINGCONFIGRESPONSE']._serialized_end=1506
+  _globals['_KEYWORDSPOTTINGRESPONSE']._serialized_start=1509
+  _globals['_KEYWORDSPOTTINGRESPONSE']._serialized_end=1675
+  _globals['_DISCORDOPUSPACKET']._serialized_start=1677
+  _globals['_DISCORDOPUSPACKET']._serialized_end=1729
+  _globals['_DISCORDOPUSPACKETLIST']._serialized_start=1731
+  _globals['_DISCORDOPUSPACKETLIST']._serialized_end=1855
+  _globals['_TRANSCRIPTION']._serialized_start=1858
+  _globals['_TRANSCRIPTION']._serialized_end=2055
 # @@protoc_insertion_point(module_scope)

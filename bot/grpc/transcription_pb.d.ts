@@ -173,10 +173,14 @@ export namespace TranscriptionConfigResponse {
 export class TranscriptionEventResponse extends jspb.Message { 
     getText(): string;
     setText(value: string): TranscriptionEventResponse;
-    getProbability(): number;
-    setProbability(value: number): TranscriptionEventResponse;
+    clearWordsList(): void;
+    getWordsList(): Array<TranscriptionEventWord>;
+    setWordsList(value: Array<TranscriptionEventWord>): TranscriptionEventResponse;
+    addWords(value?: TranscriptionEventWord, index?: number): TranscriptionEventWord;
     getSpeakerId(): string;
     setSpeakerId(value: string): TranscriptionEventResponse;
+    getProbability(): number;
+    setProbability(value: number): TranscriptionEventResponse;
     getOpusdata(): Uint8Array | string;
     getOpusdata_asU8(): Uint8Array;
     getOpusdata_asB64(): string;
@@ -197,10 +201,37 @@ export class TranscriptionEventResponse extends jspb.Message {
 export namespace TranscriptionEventResponse {
     export type AsObject = {
         text: string,
-        probability: number,
+        wordsList: Array<TranscriptionEventWord.AsObject>,
         speakerId: string,
+        probability: number,
         opusdata: Uint8Array | string,
         info: string,
+    }
+}
+
+export class TranscriptionEventWord extends jspb.Message { 
+    getWord(): string;
+    setWord(value: string): TranscriptionEventWord;
+    getProbability(): number;
+    setProbability(value: number): TranscriptionEventWord;
+    getTimestamp(): number;
+    setTimestamp(value: number): TranscriptionEventWord;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): TranscriptionEventWord.AsObject;
+    static toObject(includeInstance: boolean, msg: TranscriptionEventWord): TranscriptionEventWord.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: TranscriptionEventWord, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): TranscriptionEventWord;
+    static deserializeBinaryFromReader(message: TranscriptionEventWord, reader: jspb.BinaryReader): TranscriptionEventWord;
+}
+
+export namespace TranscriptionEventWord {
+    export type AsObject = {
+        word: string,
+        probability: number,
+        timestamp: number,
     }
 }
 
@@ -238,8 +269,6 @@ export class KeywordSpottingRequestAudio extends jspb.Message {
     addData(value: Uint8Array | string, index?: number): Uint8Array | string;
     getSpeakerId(): string;
     setSpeakerId(value: string): KeywordSpottingRequestAudio;
-    getTimestamp(): number;
-    setTimestamp(value: number): KeywordSpottingRequestAudio;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): KeywordSpottingRequestAudio.AsObject;
@@ -255,7 +284,6 @@ export namespace KeywordSpottingRequestAudio {
     export type AsObject = {
         dataList: Array<Uint8Array | string>,
         speakerId: string,
-        timestamp: number,
     }
 }
 
