@@ -106,20 +106,30 @@ function sendClose() : void{
 async function wait(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
-async function sendRequest(dumpfile: string,wait_msec: number,speaker_id: string){
+
+async function sendAudio(dumpfile: string,wait_msec: number,speaker_id: string){
     await wait(wait_msec)
     const packets=generatePackets(dumpfile)
     console.log(`start ${speaker_id} ${dumpfile} ${packets.length} packets`)
+    let audio_request : TranscriptionRequestAudio | null=null
     for(let i in packets){
         const packet=packets[i]
-        const req=new TranscriptionRequest()
-        const audio = new TranscriptionRequestAudio()
-        audio.addData(packet)
-        audio.setSpeakerId(speaker_id)
-        audio.setForceFlush(parseInt(i) == packets.length-1)
-        req.setAudio(audio)
-        api_stream.write(req)
-        process.stderr.write(".")
+        if(audio_request === null){
+            audio_request = new TranscriptionRequestAudio()
+            audio_request.setSpeakerId(speaker_id)            
+        }
+        const is_final=parseInt(i) == packets.length-1
+        audio_request.addData(packet)
+        if (is_final) {
+            audio_request.setForceFlush(true)
+        }
+        if(is_final || audio_request.getDataList().length >= 5){
+            const req=new TranscriptionRequest()
+            req.setAudio(audio_request)
+            api_stream.write(req)
+            audio_request=null
+            process.stderr.write(".")         
+        }
         await wait(20)
     }
 }
@@ -131,9 +141,9 @@ async function main(){
         receiveResponse(),
         (async ()=>{
             await Promise.all([
-                sendRequest("dump-jigoku3dayu-1696551798341.bin",0,"test1"),
-                sendRequest("dump-jigoku3dayu-1696511968012.bin",500,"test2"),
-                sendRequest("dump-jigoku3dayu-1696511950609.bin",1000,"test3")
+                //sendAudio("dump-jigoku3dayu-1696551798341.bin",0,"test1"),
+                sendAudio("dump-jigoku3dayu-1696511968012.bin",500,"test2"),
+                sendAudio("dump-jigoku3dayu-1696511950609.bin",1000,"test3")
             ])
             sendClose()
         })()

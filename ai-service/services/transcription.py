@@ -421,21 +421,21 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
                     sf.write(f, audio, 16000, format='OGG',subtype='OPUS')
                     opus = f.getvalue()
             
-
-            event_buffer.append(
-                self.createTranscriptionEventResponse(
-                    text = whole_text,
-                    words = all_words if return_words else [],
-                    start_timestamp = frame_buffer.getTimestamp(),
-                    speaker_id = speaker_id,
-                    probability = probability,
-                    info = {
-                        "temperature": temperature,
-                        "compression_ratio": compression_ratio
-                    },
-                    opusData=opus
+            if return_words or return_opus or whole_text != "":
+                event_buffer.append(
+                    self.createTranscriptionEventResponse(
+                        text = whole_text,
+                        words = all_words if return_words else [],
+                        start_timestamp = frame_buffer.getTimestamp(),
+                        speaker_id = speaker_id,
+                        probability = probability,
+                        info = {
+                            "temperature": temperature,
+                            "compression_ratio": compression_ratio
+                        },
+                        opusData=opus
+                    )
                 )
-            )
         onDoneFn(processed_frames=frame_buffer.getLength())
         print("lock release(normal)")
         lock.release()
