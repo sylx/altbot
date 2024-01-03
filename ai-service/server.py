@@ -21,19 +21,17 @@ import concurrent.futures
 _cleanup_coroutines = []
 
 async def serve(port=1234):
-    # Serverオブジェクトを作成する
     global server
     global _cleanup_coroutines
     server = grpc.aio.server()
 
-    # ThreadPoolを作成する
-    pool = concurrent.futures.ThreadPoolExecutor(max_workers=6)
+    # 様々な処理待ちに使われるスレッドプール
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=32)
 
     # Serverオブジェクトに定義したServicerクラスを登録する
     transcription_pb2_grpc.add_TranscriptionServicer_to_server(Transcription(pool), server)
     tts_pb2_grpc.add_TtsServicer_to_server(Tts(pool), server)
 
-    # [追記] リフレクション登録
     SERVICE_NAMES = (
         reflection.SERVICE_NAME,
     )
@@ -41,7 +39,6 @@ async def serve(port=1234):
     SERVICE_NAMES += (tts_pb2.DESCRIPTOR.services_by_name[Tts.__name__].full_name,)
     reflection.enable_server_reflection(SERVICE_NAMES, server)
 
-    # 1234番ポートで待ち受けするよう指定する
     server.add_insecure_port(f"[::]:{port}")
     
     # 待ち受けを開始する

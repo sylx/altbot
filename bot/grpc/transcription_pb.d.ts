@@ -17,8 +17,11 @@ export class TranscriptionRequest extends jspb.Message {
     clearAudio(): void;
     getAudio(): TranscriptionRequestAudio | undefined;
     setAudio(value?: TranscriptionRequestAudio): TranscriptionRequest;
-    getIsFinal(): boolean;
-    setIsFinal(value: boolean): TranscriptionRequest;
+
+    hasClose(): boolean;
+    clearClose(): void;
+    getClose(): TranscriptionCloseRequest | undefined;
+    setClose(value?: TranscriptionCloseRequest): TranscriptionRequest;
 
     getRequestOneofCase(): TranscriptionRequest.RequestOneofCase;
 
@@ -36,13 +39,14 @@ export namespace TranscriptionRequest {
     export type AsObject = {
         config?: TranscriptionRequestConfig.AsObject,
         audio?: TranscriptionRequestAudio.AsObject,
-        isFinal: boolean,
+        close?: TranscriptionCloseRequest.AsObject,
     }
 
     export enum RequestOneofCase {
         REQUEST_ONEOF_NOT_SET = 0,
         CONFIG = 1,
         AUDIO = 2,
+        CLOSE = 3,
     }
 
 }
@@ -57,6 +61,8 @@ export class TranscriptionRequestConfig extends jspb.Message {
     setKwsConfig(value?: KeywordSpottingRequestConfig): TranscriptionRequestConfig;
     getReturnOpus(): boolean;
     setReturnOpus(value: boolean): TranscriptionRequestConfig;
+    getReturnWords(): boolean;
+    setReturnWords(value: boolean): TranscriptionRequestConfig;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): TranscriptionRequestConfig.AsObject;
@@ -73,6 +79,7 @@ export namespace TranscriptionRequestConfig {
         prompt: string,
         kwsConfig?: KeywordSpottingRequestConfig.AsObject,
         returnOpus: boolean,
+        returnWords: boolean,
     }
 }
 
@@ -85,6 +92,8 @@ export class TranscriptionRequestAudio extends jspb.Message {
     addData(value: Uint8Array | string, index?: number): Uint8Array | string;
     getSpeakerId(): string;
     setSpeakerId(value: string): TranscriptionRequestAudio;
+    getForceFlush(): boolean;
+    setForceFlush(value: boolean): TranscriptionRequestAudio;
 
     serializeBinary(): Uint8Array;
     toObject(includeInstance?: boolean): TranscriptionRequestAudio.AsObject;
@@ -100,6 +109,27 @@ export namespace TranscriptionRequestAudio {
     export type AsObject = {
         dataList: Array<Uint8Array | string>,
         speakerId: string,
+        forceFlush: boolean,
+    }
+}
+
+export class TranscriptionCloseRequest extends jspb.Message { 
+    getIsAbort(): boolean;
+    setIsAbort(value: boolean): TranscriptionCloseRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): TranscriptionCloseRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: TranscriptionCloseRequest): TranscriptionCloseRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: TranscriptionCloseRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): TranscriptionCloseRequest;
+    static deserializeBinaryFromReader(message: TranscriptionCloseRequest, reader: jspb.BinaryReader): TranscriptionCloseRequest;
+}
+
+export namespace TranscriptionCloseRequest {
+    export type AsObject = {
+        isAbort: boolean,
     }
 }
 
@@ -114,6 +144,11 @@ export class TranscriptionResponse extends jspb.Message {
     clearEvent(): void;
     getEvent(): TranscriptionEventResponse | undefined;
     setEvent(value?: TranscriptionEventResponse): TranscriptionResponse;
+
+    hasClose(): boolean;
+    clearClose(): void;
+    getClose(): TranscriptionCloseResponse | undefined;
+    setClose(value?: TranscriptionCloseResponse): TranscriptionResponse;
 
     getResponseOneofCase(): TranscriptionResponse.ResponseOneofCase;
 
@@ -131,12 +166,14 @@ export namespace TranscriptionResponse {
     export type AsObject = {
         config?: TranscriptionConfigResponse.AsObject,
         event?: TranscriptionEventResponse.AsObject,
+        close?: TranscriptionCloseResponse.AsObject,
     }
 
     export enum ResponseOneofCase {
         RESPONSE_ONEOF_NOT_SET = 0,
         CONFIG = 1,
         EVENT = 2,
+        CLOSE = 3,
     }
 
 }
@@ -232,6 +269,26 @@ export namespace TranscriptionEventWord {
         word: string,
         probability: number,
         timestamp: number,
+    }
+}
+
+export class TranscriptionCloseResponse extends jspb.Message { 
+    getSuccess(): boolean;
+    setSuccess(value: boolean): TranscriptionCloseResponse;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): TranscriptionCloseResponse.AsObject;
+    static toObject(includeInstance: boolean, msg: TranscriptionCloseResponse): TranscriptionCloseResponse.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: TranscriptionCloseResponse, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): TranscriptionCloseResponse;
+    static deserializeBinaryFromReader(message: TranscriptionCloseResponse, reader: jspb.BinaryReader): TranscriptionCloseResponse;
+}
+
+export namespace TranscriptionCloseResponse {
+    export type AsObject = {
+        success: boolean,
     }
 }
 
