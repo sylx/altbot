@@ -131,6 +131,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         event_response=TranscriptionEventResponse(
             text=text,
             speaker_id=speaker_id,
+            timestamp=int(start_timestamp*1000.0), # to msec
             probability=probability,
             info=json.dumps(info),
             opusData=opusData

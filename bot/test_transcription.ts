@@ -49,6 +49,7 @@ async function receiveResponse(){
             console.log("event",{
                 speaker_id: event.getSpeakerId(),
                 text: event.getText(),
+                timestamp: event.getTimestamp(),
                 words: words.map(word=>word.toObject()),
                 info: JSON.parse(event.getInfo())
             })

@@ -214,6 +214,8 @@ export class TranscriptionEventResponse extends jspb.Message {
     getWordsList(): Array<TranscriptionEventWord>;
     setWordsList(value: Array<TranscriptionEventWord>): TranscriptionEventResponse;
     addWords(value?: TranscriptionEventWord, index?: number): TranscriptionEventWord;
+    getTimestamp(): number;
+    setTimestamp(value: number): TranscriptionEventResponse;
     getSpeakerId(): string;
     setSpeakerId(value: string): TranscriptionEventResponse;
     getProbability(): number;
@@ -239,6 +241,7 @@ export namespace TranscriptionEventResponse {
     export type AsObject = {
         text: string,
         wordsList: Array<TranscriptionEventWord.AsObject>,
+        timestamp: number,
         speakerId: string,
         probability: number,
         opusdata: Uint8Array | string,

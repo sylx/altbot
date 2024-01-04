@@ -81,10 +81,6 @@ async function run() {
         //     const imagesUpload = await resolveDependency(ImagesUpload)
         //     await imagesUpload.syncWithDatabase()
         // }
-
-        setTimeout(async ()=>{
-            await joinLastChannel(client)
-        },5000)
     })
     .catch((err) => {
         console.error(err)

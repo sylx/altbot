@@ -1845,10 +1845,11 @@ proto.AiService.TranscriptionEventResponse.toObject = function(includeInstance, 
     text: jspb.Message.getFieldWithDefault(msg, 1, ""),
     wordsList: jspb.Message.toObjectList(msg.getWordsList(),
     proto.AiService.TranscriptionEventWord.toObject, includeInstance),
-    speakerId: jspb.Message.getFieldWithDefault(msg, 3, ""),
-    probability: jspb.Message.getFloatingPointFieldWithDefault(msg, 4, 0.0),
+    timestamp: jspb.Message.getFieldWithDefault(msg, 3, 0),
+    speakerId: jspb.Message.getFieldWithDefault(msg, 4, ""),
+    probability: jspb.Message.getFloatingPointFieldWithDefault(msg, 5, 0.0),
     opusdata: msg.getOpusdata_asB64(),
-    info: jspb.Message.getFieldWithDefault(msg, 6, "")
+    info: jspb.Message.getFieldWithDefault(msg, 7, "")
   };
 
   if (includeInstance) {
@@ -1895,18 +1896,22 @@ proto.AiService.TranscriptionEventResponse.deserializeBinaryFromReader = functio
       msg.addWords(value);
       break;
     case 3:
+      var value = /** @type {number} */ (reader.readInt64());
+      msg.setTimestamp(value);
+      break;
+    case 4:
       var value = /** @type {string} */ (reader.readString());
       msg.setSpeakerId(value);
       break;
-    case 4:
+    case 5:
       var value = /** @type {number} */ (reader.readFloat());
       msg.setProbability(value);
       break;
-    case 5:
+    case 6:
       var value = /** @type {!Uint8Array} */ (reader.readBytes());
       msg.setOpusdata(value);
       break;
-    case 6:
+    case 7:
       var value = /** @type {string} */ (reader.readString());
       msg.setInfo(value);
       break;
@@ -1954,31 +1959,38 @@ proto.AiService.TranscriptionEventResponse.serializeBinaryToWriter = function(me
       proto.AiService.TranscriptionEventWord.serializeBinaryToWriter
     );
   }
+  f = message.getTimestamp();
+  if (f !== 0) {
+    writer.writeInt64(
+      3,
+      f
+    );
+  }
   f = message.getSpeakerId();
   if (f.length > 0) {
     writer.writeString(
-      3,
+      4,
       f
     );
   }
   f = message.getProbability();
   if (f !== 0.0) {
     writer.writeFloat(
-      4,
+      5,
       f
     );
   }
   f = message.getOpusdata_asU8();
   if (f.length > 0) {
     writer.writeBytes(
-      5,
+      6,
       f
     );
   }
   f = message.getInfo();
   if (f.length > 0) {
     writer.writeString(
-      6,
+      7,
       f
     );
   }
@@ -2042,11 +2054,29 @@ proto.AiService.TranscriptionEventResponse.prototype.clearWordsList = function()
 
 
 /**
- * optional string speaker_id = 3;
+ * optional int64 timestamp = 3;
+ * @return {number}
+ */
+proto.AiService.TranscriptionEventResponse.prototype.getTimestamp = function() {
+  return /** @type {number} */ (jspb.Message.getFieldWithDefault(this, 3, 0));
+};
+
+
+/**
+ * @param {number} value
+ * @return {!proto.AiService.TranscriptionEventResponse} returns this
+ */
+proto.AiService.TranscriptionEventResponse.prototype.setTimestamp = function(value) {
+  return jspb.Message.setProto3IntField(this, 3, value);
+};
+
+
+/**
+ * optional string speaker_id = 4;
  * @return {string}
  */
 proto.AiService.TranscriptionEventResponse.prototype.getSpeakerId = function() {
-  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 3, ""));
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 4, ""));
 };
 
 
@@ -2055,16 +2085,16 @@ proto.AiService.TranscriptionEventResponse.prototype.getSpeakerId = function() {
  * @return {!proto.AiService.TranscriptionEventResponse} returns this
  */
 proto.AiService.TranscriptionEventResponse.prototype.setSpeakerId = function(value) {
-  return jspb.Message.setProto3StringField(this, 3, value);
+  return jspb.Message.setProto3StringField(this, 4, value);
 };
 
 
 /**
- * optional float probability = 4;
+ * optional float probability = 5;
  * @return {number}
  */
 proto.AiService.TranscriptionEventResponse.prototype.getProbability = function() {
-  return /** @type {number} */ (jspb.Message.getFloatingPointFieldWithDefault(this, 4, 0.0));
+  return /** @type {number} */ (jspb.Message.getFloatingPointFieldWithDefault(this, 5, 0.0));
 };
 
 
@@ -2073,21 +2103,21 @@ proto.AiService.TranscriptionEventResponse.prototype.getProbability = function()
  * @return {!proto.AiService.TranscriptionEventResponse} returns this
  */
 proto.AiService.TranscriptionEventResponse.prototype.setProbability = function(value) {
-  return jspb.Message.setProto3FloatField(this, 4, value);
+  return jspb.Message.setProto3FloatField(this, 5, value);
 };
 
 
 /**
- * optional bytes opusData = 5;
+ * optional bytes opusData = 6;
  * @return {!(string|Uint8Array)}
  */
 proto.AiService.TranscriptionEventResponse.prototype.getOpusdata = function() {
-  return /** @type {!(string|Uint8Array)} */ (jspb.Message.getFieldWithDefault(this, 5, ""));
+  return /** @type {!(string|Uint8Array)} */ (jspb.Message.getFieldWithDefault(this, 6, ""));
 };
 
 
 /**
- * optional bytes opusData = 5;
+ * optional bytes opusData = 6;
  * This is a type-conversion wrapper around `getOpusdata()`
  * @return {string}
  */
@@ -2098,7 +2128,7 @@ proto.AiService.TranscriptionEventResponse.prototype.getOpusdata_asB64 = functio
 
 
 /**
- * optional bytes opusData = 5;
+ * optional bytes opusData = 6;
  * Note that Uint8Array is not supported on all browsers.
  * @see http://caniuse.com/Uint8Array
  * This is a type-conversion wrapper around `getOpusdata()`
@@ -2115,16 +2145,16 @@ proto.AiService.TranscriptionEventResponse.prototype.getOpusdata_asU8 = function
  * @return {!proto.AiService.TranscriptionEventResponse} returns this
  */
 proto.AiService.TranscriptionEventResponse.prototype.setOpusdata = function(value) {
-  return jspb.Message.setProto3BytesField(this, 5, value);
+  return jspb.Message.setProto3BytesField(this, 6, value);
 };
 
 
 /**
- * optional string info = 6;
+ * optional string info = 7;
  * @return {string}
  */
 proto.AiService.TranscriptionEventResponse.prototype.getInfo = function() {
-  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 6, ""));
+  return /** @type {string} */ (jspb.Message.getFieldWithDefault(this, 7, ""));
 };
 
 
@@ -2133,7 +2163,7 @@ proto.AiService.TranscriptionEventResponse.prototype.getInfo = function() {
  * @return {!proto.AiService.TranscriptionEventResponse} returns this
  */
 proto.AiService.TranscriptionEventResponse.prototype.setInfo = function(value) {
-  return jspb.Message.setProto3StringField(this, 6, value);
+  return jspb.Message.setProto3StringField(this, 7, value);
 };
 
 

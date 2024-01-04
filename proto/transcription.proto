@@ -46,10 +46,11 @@ message TranscriptionConfigResponse {
 message TranscriptionEventResponse {
 	string text = 1;
 	repeated TranscriptionEventWord words = 2;
-	string speaker_id = 3;
-	float probability = 4;
-	bytes opusData = 5;
-	string info = 6; // json
+	int64 timestamp = 3;
+	string speaker_id = 4;
+	float probability = 5;
+	bytes opusData = 6;
+	string info = 7; // json
 }
 
 message TranscriptionEventWord {

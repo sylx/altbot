@@ -7,6 +7,7 @@ import {
     TranscriptionAudioRequest,
     TranscriptionCloseRequest,
     TranscriptionConfigRequest,
+    TranscriptionEventResponse,
     TranscriptionRequest,TranscriptionResponse
 } from "../../grpc/transcription_pb"
 import { AudioReceiveStream, EndBehaviorType } from "@discordjs/voice"
@@ -16,12 +17,18 @@ import { VoiceChat } from "./VoiceChat"
 import { once } from "events"
 
 export type TranscriptionEvent = {
+    text: string
+    speaker_id: string
+    probability: number
+    info: {[key: string]: any}
+    timestamp: number
 }
 
 type UserStream = {
     user_id: string
     stream: AudioReceiveStream
 }
+
 
 type ApiStream=grpc.ClientDuplexStream<TranscriptionRequest,TranscriptionResponse>
 
@@ -158,6 +165,7 @@ export class Transcription implements IGuildDependent{
         }
         const req=new TranscriptionRequest()
         req.setConfig(config)
+        api_stream.write(req)
         const response: TranscriptionResponse[] = await once(api_stream,"data")
         const config_response=response[0].getConfig()
         if(config_response && config_response.getSuccess()){
@@ -200,7 +208,22 @@ export class Transcription implements IGuildDependent{
         //受信ループ
         const receive_promise=(async function(){
             try {
+                api_stream.on("close",()=>{
+                    is_closed=true
+                })
+                let is_closed=false
                 for await (const response of api_stream){
+                    if(is_closed) break
+                    if(response.hasEvent()){
+                        const event_response : TranscriptionEventResponse =response.getEvent()
+                        emitter.emit("transcription",{
+                            text: event_response.getText(),
+                            speaker_id: event_response.getSpeakerId(),
+                            probability: event_response.getProbability(),
+                            info: JSON.parse(event_response.getInfo()),
+                            timestamp: event_response.getTimestamp()
+                        } as TranscriptionEvent)
+                    }
                 }
             }catch(e){
                 //abortするとここに来る                
