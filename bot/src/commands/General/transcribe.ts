@@ -11,6 +11,7 @@ import { VoiceConnection } from "@discordjs/voice"
 import { injectable } from "tsyringe"
 import { KeywordSpotting,VoiceChat,Tts,Transcription, KeywordSpottingFoundEvent } from "@services"
 import { EventEmitter } from "events"
+import { KeywordSpottingEmbed } from "src/embeds"
 
 
 const COMBINED_LOG_DURATION = 5*60*1000 //5分
@@ -59,14 +60,14 @@ export default class TranscribeCommand {
 		const event_log : KeywordSpottingFoundEvent[]=[]
 		
 		emitter.on("ready",()=>{
-			this.updateEmbed(interaction,keyword,event_log,abortController)
+			KeywordSpottingEmbed(interaction,keyword,event_log,abortController)
 		})
 		emitter.on("found",async (evt: KeywordSpottingFoundEvent)=>{
 			
 			event_log.push(evt)
 			if(event_log.length > 5)
 				event_log.shift()
-			this.updateEmbed(interaction,keyword,event_log,abortController)			
+			KeywordSpottingEmbed(interaction,keyword,event_log,abortController)			
 
 			const words=[
 				"うん。いいね",
@@ -84,13 +85,13 @@ export default class TranscribeCommand {
 		})
 		try{
 			await keywordSpotting.start(keyword.split(/[　\s]+/),threshold,channel_members,emitter,abortController)
-			this.updateEmbed(interaction,keyword,event_log,null)
+			KeywordSpottingEmbed(interaction,keyword,event_log)
 			simpleSuccessEmbed(
 				interaction,
 				`終了しました`
 			)
 		}catch(e: any){
-			this.updateEmbed(interaction,keyword,event_log,null)
+			KeywordSpottingEmbed(interaction,keyword,event_log)
 			simpleErrorEmbed(
 				interaction,
 				`エラーが発生したので終了します ${e}}`
@@ -99,43 +100,6 @@ export default class TranscribeCommand {
 		}
 		await voiceChat.leave()
 	}
-
-    async updateEmbed(interaction: CommandInteraction,keyword: string,event_log: KeywordSpottingFoundEvent[],abortController: AbortController | null){
-        const embed = new EmbedBuilder()
-            .setColor(0x00ffff)
-            .setTitle("キーワード検出結果")
-            .setDescription(`設定キーワード:${keyword}`)
-            .setFields(event_log.map(item=>{
-					const displayName=item.speaker_id ? interaction.guild?.members.cache.get(item.speaker_id)?.displayName : "不明"
-                    return {
-                        name: `${item.keyword} (${new Date(item.timestamp).toLocaleTimeString('ja-JP', { hour12: false })})`,
-                        value: `確度: ${item.probability} 発言者: ${displayName}`,
-                        inline: false
-                    }
-                }))
-        const buttons = [
-            new ButtonBuilder()
-                .setLabel('停止')
-                .setStyle(ButtonStyle.Danger)
-                .setCustomId('stop')
-        ]
-        const row=new ActionRowBuilder<ButtonBuilder>()
-            .addComponents(...buttons)
-        const msg = await interaction.editReply({
-            embeds: [embed],
-            components: abortController ? [row] : []
-        })
-
-		if(abortController){
-			const collector=msg.createMessageComponentCollector({ componentType: ComponentType.Button, time: 300_000 })
-			collector.on('collect', async i => {
-				if(i.customId === "stop"){
-					abortController.abort()
-				}
-			})
-		}
-        return msg
-    }
 
 	@Slash({
 		description: "音声パケットリストを出力します（デバッグ用)",

@@ -1,268 +1,216 @@
-
 import * as grpc from "@grpc/grpc-js"
-import { GuildMember, VoiceChannel } from "discord.js"
 import { delay, inject } from "tsyringe"
+import { GuildMember } from "discord.js"
 import { TranscriptionClient } from "../../grpc/transcription_grpc_pb"
-import { TranscriptionEvent, DiscordOpusPacket, DiscordOpusPacketList } from "../../grpc/transcription_pb"
-import { Writable } from "stream"
-import { EndBehaviorType, VoiceConnection } from "@discordjs/voice"
+import {
+    KeywordSpottingConfigRequest,
+    TranscriptionAudioRequest,
+    TranscriptionCloseRequest,
+    TranscriptionConfigRequest,
+    TranscriptionRequest,TranscriptionResponse
+} from "../../grpc/transcription_pb"
+import { AudioReceiveStream, EndBehaviorType } from "@discordjs/voice"
 import { EventEmitter } from "events"
-import { IGuildDependent, guildScoped, resolveDependency } from "@utils/functions"
-import { Logger } from "./Logger"
+import { IGuildDependent, PromiseAllDynamic, guildScoped } from "@utils/functions"
 import { VoiceChat } from "./VoiceChat"
+import { once } from "events"
 
-
-//まとめて送りつけるパケット数(1パケットの長さはだいたい20ms)
-const SEND_PACKET_NUM = 20
-
-export type TranscribeResult = {
-    text: string
-    probability: number
+export type TranscriptionEvent = {
 }
 
-
-export class TranscriptionWriteStream extends Writable{
-    protected packetList : DiscordOpusPacketList | null = null
-    protected packetDump : Array<DiscordOpusPacket> = []
-    constructor(
-        protected api_bi_stream : grpc.ClientDuplexStream<DiscordOpusPacketList,TranscriptionEvent> | null,
-        protected speaker_id: string,
-        protected prompt: string = "",
-        protected keepPacket: boolean = false,
-        protected passWholePacket: boolean = false,
-    ){ 
-        super()
-    }
-
-    _write(chunk: Buffer, encoding: BufferEncoding, callback: (error?: Error | null) => void): void {
-        if(this.packetList === null){
-            this.packetList = new DiscordOpusPacketList()
-        }
-        const packet = new DiscordOpusPacket()
-        packet.setData(Uint8Array.from(chunk))
-        // now(milliseconds)
-        packet.setTimestamp(Date.now())
-        this.packetList.addPackets(packet)
-        let err: Error | null = null
-        if(!this.passWholePacket && this.packetList.getPacketsList().length >= SEND_PACKET_NUM){
-            err = this._flush(false)
-        }
-        callback(err)
-    }
-
-    _flush(is_final : boolean): Error | null {
-        if(this.packetList === null){
-            this.packetList = new DiscordOpusPacketList() //empty
-        }
-        let err: Error | null = null
-        this.packetList.setIsFinal(is_final)
-        this.packetList.setSpeakerId(this.speaker_id)
-        this.packetList.setPrompt(this.prompt)
-        //console.log("flush",is_final ? "final" : "",this.packetList.getPacketsList().length,"packets")
-        //process.stdout.write(is_final ? "!" : ".")
-        
-
-        if(this.api_bi_stream){
-            if(!this.api_bi_stream.write(this.packetList)){
-                //err = new Error("write error")
-                console.error("write error")
-            }
-        }
-        if(this.keepPacket){
-            this.packetList.getPacketsList().forEach((packet)=>{
-                this.packetDump.push(packet)
-            })
-        }
-        this.packetList = null
-        return null
-    }
-
-    _final(callback: (error?: Error | null) => void): void {
-        this._flush(true)
-        callback()
-    }
-    //一つのpacketListにまとめて返す
-    getPacketDump() : Buffer{
-        const packet_list=new DiscordOpusPacketList()
-        this.packetDump.map((packet)=>{
-            packet_list.addPackets(packet)
-        })
-        //一応
-        packet_list.setSpeakerId(this.speaker_id)
-        packet_list.setPrompt(this.prompt)
-        packet_list.setIsFinal(true)
-        return Buffer.from(packet_list.serializeBinary())
-    }
+type UserStream = {
+    user_id: string
+    stream: AudioReceiveStream
 }
 
-type ApiStream = grpc.ClientDuplexStream<DiscordOpusPacketList,TranscriptionEvent>
+type ApiStream=grpc.ClientDuplexStream<TranscriptionRequest,TranscriptionResponse>
+
+const CHUNK_SIZE = 5
 
 @guildScoped()
 export class Transcription implements IGuildDependent{
     public client : TranscriptionClient
-    protected emitter: EventEmitter = new EventEmitter()
     protected listeningStatus : {[key: string]: boolean} = {}
 
     constructor(
-        @inject(delay(() => VoiceChat)) private voiceChat: VoiceChat
+        @inject(delay(() => VoiceChat)) private voiceChat: VoiceChat,
     ) {
         this.client=new TranscriptionClient(
             `${process.env.AI_SERVICE_HOST}:${process.env.AI_SERVICE_PORT}`,
             grpc.credentials.createInsecure()
           )
     }
+    protected connectApi() : ApiStream{
+        return this.client.transcription()
+    }
     getGuildId(): string | null {
         return this.voiceChat.getGuildId()
     }
-    protected connectApi(emitter: EventEmitter) : ApiStream{
-        return this.client.transcriptionBiStreams()       
-    }
-
-    async startListen(connection: VoiceConnection,channel: VoiceChannel,prompt: string | Function) : Promise<void>{
-        const logger = await resolveDependency(Logger)
-        const receiver = connection.receiver;
-        receiver.speaking.on('start', async (userId) => {
-            const member = channel.guild.members.cache.get(userId) as GuildMember
-            if(this.listeningStatus[userId]) return
-            if(member){
-                logger.log(`listen start ${member.displayName}(${member.user.username})`,"info")
-                this.listeningStatus[userId] = true
-                const prompt_str = typeof prompt === "function" ? await prompt() : prompt
-                this.listeningStatus[userId] = false
-                logger.log(`listen end ${member.displayName}(${member.user.username})`,"info")
-            }
-        })
-    }
-
-    getPacketDump(connection: VoiceConnection,member: GuildMember) : Promise<Buffer>{
-        let already_listen = false
-        return new Promise((resolve,reject)=>{
-            const receiver = connection.receiver;            
-            receiver.speaking.once('start', async (userId) => {
-                if(userId !== member.user.id) return
-                if(already_listen) return
-                console.log("write start")
-                already_listen = true
-                const write_stream = new TranscriptionWriteStream(null as any,userId,"",true)
-                const opusStream=receiver.subscribe(userId, {
-                    end: {
-                        behavior: EndBehaviorType.AfterSilence,
-                        duration: 3000,
-                    },  
-                })
-                opusStream
-                .pipe(write_stream as TranscriptionWriteStream)
-                .on("finish",async ()=>{
-                    console.log("write end")
-                    already_listen = false
-                    resolve(write_stream.getPacketDump())
-                })
-                .on("error",(err)=>{
-                    console.error(err)
-                    reject(err)
-                })
+    // wait_for_eventがtrueの場合は、現在解析中の内容を最後まで受け取ってから終了する
+    protected abort(api_stream: ApiStream,streams: UserStream[],wait_for_event?: boolean) : void{
+        if(wait_for_event){
+            this.closeApiConnection(api_stream,true).then(()=>{
+                this.listeningStatus = {}
+                api_stream.end()
+                streams.forEach(stream=>{
+                    stream.stream.removeAllListeners()
+                    stream.stream.destroy()
+                })        
             })
+            return
+        }
+        this.listeningStatus = {}
+        api_stream.end()
+        streams.forEach(stream=>{
+            stream.stream.removeAllListeners()
+            stream.stream.destroy()
         })
     }
 
-    async transcribeMember(connection: VoiceConnection,member: GuildMember, timeout: number,prompt: string) : Promise<EventEmitter>{
-        const user = member.user
-        const emitter=new EventEmitter()
-        const api_stream=await this.connectApi(emitter)
-        const id=`${user.id}_${Date.now()}`
-        let first_result_packet_timestamp : number | null = null
-        let current_data_text: string | null = null
-        let current_data_probability: number | null = null
-        const write_stream = new TranscriptionWriteStream(api_stream as any,id,prompt)
+    protected async closeApiConnection(api_stream: ApiStream,is_abort?: boolean) : Promise<void>{
+        // send closeRequest
+        const req=new TranscriptionRequest()
+        const close=new TranscriptionCloseRequest()
+        close.setIsAbort(is_abort ?? false)
+        req.setClose(close)
+        api_stream.write(req)
+
+        // 向こうからcloseされるのを待つ
+        await once(api_stream,"close")
+    }
+
+
+    protected getKeywordConfig(keyword: string[],threshold: number) : KeywordSpottingConfigRequest{
+        const config = new KeywordSpottingConfigRequest()
+        config.setKeywordList(keyword)
+        config.setThreshold(threshold)
+        return config
+    }
+
+    protected getOpusStream(member: GuildMember,timeout: number | null) : UserStream{
+        const connection = this.voiceChat.getConnection()
+        if(!connection){
+            throw new Error("voice connection is null")
+        }
         const receiver = connection.receiver;
-        console.log("connect api")
-        let already_listen = false
-        const onSpeakingStart = async (userId: string) => {
-            if(userId !== user.id) return
-            if(already_listen) return
-            already_listen = true            
-            console.log(`${member.displayName} speaking start`)
-            const opusStream=receiver.subscribe(userId, {
-                end: {
+        return {
+            user_id: member.id,
+            stream: receiver.subscribe(member.id, {
+                end: timeout ? {
                     behavior: EndBehaviorType.AfterSilence,
                     duration: timeout,
-                },
-            })
-            opusStream
-                .pipe(write_stream)
-                .on("finish",async ()=>{
-                    console.log("write end")
-                    setTimeout(()=>{
-                        console.log("timeout")
-                        emitter.emit("terminate")
-                    },10_000) //packet送信が終わって10秒衣内に結果が返ってこない場合は終了
-                })
-                .on("error",(err)=>{
-                    console.error(err)
-                    emitter.emit("terminate")
-                })
-            emitter.on("api_end",()=>{
-                console.log("api end")
-                emitter.emit("terminate")
-            })
-            emitter.on("transcription",async (data: any)=>{
-                if(data.speaker_id !== id) return
-                console.log("received",data)
-                if(first_result_packet_timestamp === null){
-
-                    first_result_packet_timestamp = data.packet_timestamp
-                    current_data_text = data.text
-                    current_data_probability = data.probability
-                }else if(first_result_packet_timestamp < data.packet_timestamp){
-                    if(data.probability < 0.3) return
-                    //後ろの音声のデータなので、前回結果に追加する
-                    current_data_text += data.text
-                    current_data_probability = Math.min(current_data_probability as number,data.probability)
+                } : {
+                    behavior: EndBehaviorType.Manual
                 }
-                emitter.emit("flush")
             })
-            emitter.on("flush",()=>{
-                emitter.emit("result",{
-                    id,
-                    text: current_data_text,
-                    probability: current_data_probability
-                })
-            })
-            emitter.on("terminate",()=>{
-                write_stream.end()
-                api_stream.end()
-
-                receiver.speaking.off('start', onSpeakingStart)
-            })
-        }            
-        receiver.speaking.on('start', onSpeakingStart)
-        return emitter
+        } as UserStream
     }
 
-        
-    protected async listen(connection: VoiceConnection,member: GuildMember,timeout: number,write_stream: TranscriptionWriteStream){
-        const user = member.user
-        const emitter=new EventEmitter()
-        const api_stream=await this.connectApi(emitter)
+    //送信ループを開始する
+    public async startListenStream(stream: UserStream,api_stream: ApiStream) : Promise<void>{
+        const user_id=stream.user_id
+        try {
+            let audio_request : TranscriptionAudioRequest | null=null
+            let is_closed=false
+            stream.stream.on("end",()=>{
+                console.log("opus stream end")
+                //flush
+                if(audio_request !== null){
+                    const req=new TranscriptionRequest()
+                    audio_request.setForceFlush(true)
+                    req.setAudio(audio_request)
+                    api_stream.write(req)
+                    audio_request=null
+                }
+                is_closed=true
+            })
 
-        const receiver = connection.receiver;
-        const opusStream=receiver.subscribe(user.id, {
-            end: {
-                behavior: EndBehaviorType.AfterSilence,
-                duration: timeout,
-            },
+            for await (const packet of stream.stream){
+                if(is_closed) break
+                if(audio_request === null){
+                    audio_request = new TranscriptionAudioRequest()
+                    audio_request.setSpeakerId(user_id)            
+                }
+                audio_request.addData(packet)
+                if(audio_request.getDataList().length >= CHUNK_SIZE){
+                    //flush
+                    const req=new TranscriptionRequest()
+                    req.setAudio(audio_request)
+                    api_stream.write(req)
+                    audio_request=null
+                }
+            }
+        }catch(e: any){
+            //abortするとここに来る
+            console.error(e)
+            stream.stream.removeAllListeners()
+            stream.stream.destroy(e)
+        }
+    }
+
+    protected async sendConfig(api_stream: ApiStream,prompt: string,keyword?: string[]) : Promise<boolean>{
+        const config=new TranscriptionConfigRequest()
+        config.setPrompt(prompt)
+        config.setReturnOpus(false)
+        config.setReturnWords(false)
+        if(keyword && keyword.length > 0){
+            config.setKwsConfig(this.getKeywordConfig(keyword,0.5))
+        }
+        const req=new TranscriptionRequest()
+        req.setConfig(config)
+        const response: TranscriptionResponse[] = await once(api_stream,"data")
+        const config_response=response[0].getConfig()
+        if(config_response && config_response.getSuccess()){
+            return true
+        }
+        return false
+    }
+
+    public async start(prompt: string,keyword: string[],listen_members: GuildMember[],emitter: EventEmitter,abortController : AbortController) : Promise<void>{
+        const api_stream=await this.connectApi()
+        const connection = this.voiceChat.getConnection()
+        if(!connection){
+            throw new Error("voice connection is null")
+        }
+        const channel=this.voiceChat.getChannel()
+        if(!channel){
+            throw new Error("voice channel is null")
+        }
+
+        const streams=listen_members.map(member=>this.getOpusStream(member,null))
+
+        // abortハンドラを設定
+        abortController.signal.addEventListener("abort",()=>{
+            this.abort(api_stream,streams,true)
         })
-        return new Promise((resolve,reject)=>{
-            opusStream
-                .pipe(write_stream)
-                .on("finish",async ()=>{
-                    console.log("write end")
-                    resolve()
-                })
-                .on("error",(err)=>{
-                    console.error(err)
-                    reject(err)
-                })
-        }) as Promise<void>
+        // api_streamのエラーハンドラを設定
+        api_stream.on("error",(e)=>{
+            this.abort(api_stream,streams)
+            throw e
+        })
+        // config
+        if(!await this.sendConfig(api_stream,prompt,keyword)){
+            throw new Error("config failed")
+        }
+        emitter.emit("ready")
+
+        //送信ループ
+        const listen_promises=streams.map(stream=>this.startListenStream(stream,api_stream))
+
+        //受信ループ
+        const receive_promise=(async function(){
+            try {
+                for await (const response of api_stream){
+                }
+            }catch(e){
+                //abortするとここに来る                
+                console.error(e)
+            }
+        })()
+        // 送信が全て終わるまで待つ（abortした場合は、streamが死ぬので、どっちにしろ終わる)
+        await PromiseAllDynamic<void>(listen_promises)
+        // 受信が終わるまで待つ
+        await this.closeApiConnection(api_stream)
     }
 }
+
