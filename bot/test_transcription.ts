@@ -4,8 +4,8 @@ import "reflect-metadata";
 import { TranscriptionClient } from "./grpc/transcription_grpc_pb";
 import { OpusEncoder } from "@discordjs/opus";
 import { DiscordOpusPacketList, DiscordOpusPacket,
-    KeywordSpottingRequestConfig,
-    TranscriptionRequest,TranscriptionRequestConfig,TranscriptionRequestAudio,TranscriptionResponse,TranscriptionConfigResponse,TranscriptionEventResponse, TranscriptionCloseRequest
+    KeywordSpottingConfigRequest,
+    TranscriptionRequest,TranscriptionConfigRequest,TranscriptionAudioRequest,TranscriptionResponse,TranscriptionConfigResponse,TranscriptionEventResponse, TranscriptionCloseRequest
  } from "./grpc/transcription_pb";
 import fs from "node:fs";
 import { once } from "events";
@@ -82,8 +82,8 @@ async function sendConfig() : Promise<void>{
     const prompt="日常会話"
     const keywords=["アルト","サムゲタン","ディープステート"]
     const req=new TranscriptionRequest()
-    const config = new TranscriptionRequestConfig()
-    const kw_config = new KeywordSpottingRequestConfig()
+    const config = new TranscriptionConfigRequest()
+    const kw_config = new KeywordSpottingConfigRequest()
     config.setPrompt(prompt)
     kw_config.setKeywordList(keywords)
     config.setKwsConfig(kw_config)
@@ -111,11 +111,11 @@ async function sendAudio(dumpfile: string,wait_msec: number,speaker_id: string){
     await wait(wait_msec)
     const packets=generatePackets(dumpfile)
     console.log(`start ${speaker_id} ${dumpfile} ${packets.length} packets`)
-    let audio_request : TranscriptionRequestAudio | null=null
+    let audio_request : TranscriptionAudioRequest | null=null
     for(let i in packets){
         const packet=packets[i]
         if(audio_request === null){
-            audio_request = new TranscriptionRequestAudio()
+            audio_request = new TranscriptionAudioRequest()
             audio_request.setSpeakerId(speaker_id)            
         }
         const is_final=parseInt(i) == packets.length-1

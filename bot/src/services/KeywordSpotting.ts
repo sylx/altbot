@@ -5,7 +5,7 @@ import { GuildMember } from "discord.js"
 import { TranscriptionClient } from "../../grpc/transcription_grpc_pb"
 import {
     KeywordSpottingFoundEventResponse, KeywordSpottingFound, KeywordSpottingRequest,
-    KeywordSpottingRequestAudio, KeywordSpottingRequestConfig, KeywordSpottingResponse
+    KeywordSpottingAudioRequest, KeywordSpottingConfigRequest, KeywordSpottingResponse
 } from "../../grpc/transcription_pb"
 import { AudioReceiveStream, EndBehaviorType } from "@discordjs/voice"
 import { EventEmitter } from "events"
@@ -57,7 +57,7 @@ export class KeywordSpotting implements IGuildDependent{
 
     protected async setKeyword(api_stream: ApiStream,keyword: string[],threshold: number) : Promise<boolean>{
         const req=new KeywordSpottingRequest()
-        const config = new KeywordSpottingRequestConfig()
+        const config = new KeywordSpottingConfigRequest()
         config.setKeywordList(keyword)
         config.setThreshold(threshold)
         req.setConfig(config)
@@ -92,6 +92,12 @@ export class KeywordSpotting implements IGuildDependent{
         if(!connection){
             throw new Error("voice connection is null")
         }
+        const channel=this.voiceChat.getChannel()
+        if(!channel){
+            throw new Error("voice channel is null")
+        }
+
+
         const streams=listen_members.map(member=>this.getOpusStream(member,null))
 
         // abortハンドラを設定
@@ -116,7 +122,7 @@ export class KeywordSpotting implements IGuildDependent{
                 try {
                     for await (const packet of stream.stream){
                         const req=new KeywordSpottingRequest()
-                        const audio = new KeywordSpottingRequestAudio()
+                        const audio = new KeywordSpottingAudioRequest()
                         audio.addData(packet)
                         audio.setSpeakerId(user_id)
                         req.setAudio(audio)

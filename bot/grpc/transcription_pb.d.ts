@@ -10,13 +10,13 @@ export class TranscriptionRequest extends jspb.Message {
 
     hasConfig(): boolean;
     clearConfig(): void;
-    getConfig(): TranscriptionRequestConfig | undefined;
-    setConfig(value?: TranscriptionRequestConfig): TranscriptionRequest;
+    getConfig(): TranscriptionConfigRequest | undefined;
+    setConfig(value?: TranscriptionConfigRequest): TranscriptionRequest;
 
     hasAudio(): boolean;
     clearAudio(): void;
-    getAudio(): TranscriptionRequestAudio | undefined;
-    setAudio(value?: TranscriptionRequestAudio): TranscriptionRequest;
+    getAudio(): TranscriptionAudioRequest | undefined;
+    setAudio(value?: TranscriptionAudioRequest): TranscriptionRequest;
 
     hasClose(): boolean;
     clearClose(): void;
@@ -37,8 +37,8 @@ export class TranscriptionRequest extends jspb.Message {
 
 export namespace TranscriptionRequest {
     export type AsObject = {
-        config?: TranscriptionRequestConfig.AsObject,
-        audio?: TranscriptionRequestAudio.AsObject,
+        config?: TranscriptionConfigRequest.AsObject,
+        audio?: TranscriptionAudioRequest.AsObject,
         close?: TranscriptionCloseRequest.AsObject,
     }
 
@@ -51,61 +51,61 @@ export namespace TranscriptionRequest {
 
 }
 
-export class TranscriptionRequestConfig extends jspb.Message { 
+export class TranscriptionConfigRequest extends jspb.Message { 
     getPrompt(): string;
-    setPrompt(value: string): TranscriptionRequestConfig;
+    setPrompt(value: string): TranscriptionConfigRequest;
 
     hasKwsConfig(): boolean;
     clearKwsConfig(): void;
-    getKwsConfig(): KeywordSpottingRequestConfig | undefined;
-    setKwsConfig(value?: KeywordSpottingRequestConfig): TranscriptionRequestConfig;
+    getKwsConfig(): KeywordSpottingConfigRequest | undefined;
+    setKwsConfig(value?: KeywordSpottingConfigRequest): TranscriptionConfigRequest;
     getReturnOpus(): boolean;
-    setReturnOpus(value: boolean): TranscriptionRequestConfig;
+    setReturnOpus(value: boolean): TranscriptionConfigRequest;
     getReturnWords(): boolean;
-    setReturnWords(value: boolean): TranscriptionRequestConfig;
+    setReturnWords(value: boolean): TranscriptionConfigRequest;
 
     serializeBinary(): Uint8Array;
-    toObject(includeInstance?: boolean): TranscriptionRequestConfig.AsObject;
-    static toObject(includeInstance: boolean, msg: TranscriptionRequestConfig): TranscriptionRequestConfig.AsObject;
+    toObject(includeInstance?: boolean): TranscriptionConfigRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: TranscriptionConfigRequest): TranscriptionConfigRequest.AsObject;
     static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
     static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-    static serializeBinaryToWriter(message: TranscriptionRequestConfig, writer: jspb.BinaryWriter): void;
-    static deserializeBinary(bytes: Uint8Array): TranscriptionRequestConfig;
-    static deserializeBinaryFromReader(message: TranscriptionRequestConfig, reader: jspb.BinaryReader): TranscriptionRequestConfig;
+    static serializeBinaryToWriter(message: TranscriptionConfigRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): TranscriptionConfigRequest;
+    static deserializeBinaryFromReader(message: TranscriptionConfigRequest, reader: jspb.BinaryReader): TranscriptionConfigRequest;
 }
 
-export namespace TranscriptionRequestConfig {
+export namespace TranscriptionConfigRequest {
     export type AsObject = {
         prompt: string,
-        kwsConfig?: KeywordSpottingRequestConfig.AsObject,
+        kwsConfig?: KeywordSpottingConfigRequest.AsObject,
         returnOpus: boolean,
         returnWords: boolean,
     }
 }
 
-export class TranscriptionRequestAudio extends jspb.Message { 
+export class TranscriptionAudioRequest extends jspb.Message { 
     clearDataList(): void;
     getDataList(): Array<Uint8Array | string>;
     getDataList_asU8(): Array<Uint8Array>;
     getDataList_asB64(): Array<string>;
-    setDataList(value: Array<Uint8Array | string>): TranscriptionRequestAudio;
+    setDataList(value: Array<Uint8Array | string>): TranscriptionAudioRequest;
     addData(value: Uint8Array | string, index?: number): Uint8Array | string;
     getSpeakerId(): string;
-    setSpeakerId(value: string): TranscriptionRequestAudio;
+    setSpeakerId(value: string): TranscriptionAudioRequest;
     getForceFlush(): boolean;
-    setForceFlush(value: boolean): TranscriptionRequestAudio;
+    setForceFlush(value: boolean): TranscriptionAudioRequest;
 
     serializeBinary(): Uint8Array;
-    toObject(includeInstance?: boolean): TranscriptionRequestAudio.AsObject;
-    static toObject(includeInstance: boolean, msg: TranscriptionRequestAudio): TranscriptionRequestAudio.AsObject;
+    toObject(includeInstance?: boolean): TranscriptionAudioRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: TranscriptionAudioRequest): TranscriptionAudioRequest.AsObject;
     static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
     static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-    static serializeBinaryToWriter(message: TranscriptionRequestAudio, writer: jspb.BinaryWriter): void;
-    static deserializeBinary(bytes: Uint8Array): TranscriptionRequestAudio;
-    static deserializeBinaryFromReader(message: TranscriptionRequestAudio, reader: jspb.BinaryReader): TranscriptionRequestAudio;
+    static serializeBinaryToWriter(message: TranscriptionAudioRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): TranscriptionAudioRequest;
+    static deserializeBinaryFromReader(message: TranscriptionAudioRequest, reader: jspb.BinaryReader): TranscriptionAudioRequest;
 }
 
-export namespace TranscriptionRequestAudio {
+export namespace TranscriptionAudioRequest {
     export type AsObject = {
         dataList: Array<Uint8Array | string>,
         speakerId: string,
@@ -292,69 +292,17 @@ export namespace TranscriptionCloseResponse {
     }
 }
 
-export class KeywordSpottingRequestConfig extends jspb.Message { 
-    clearKeywordList(): void;
-    getKeywordList(): Array<string>;
-    setKeywordList(value: Array<string>): KeywordSpottingRequestConfig;
-    addKeyword(value: string, index?: number): string;
-    getThreshold(): number;
-    setThreshold(value: number): KeywordSpottingRequestConfig;
-
-    serializeBinary(): Uint8Array;
-    toObject(includeInstance?: boolean): KeywordSpottingRequestConfig.AsObject;
-    static toObject(includeInstance: boolean, msg: KeywordSpottingRequestConfig): KeywordSpottingRequestConfig.AsObject;
-    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
-    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-    static serializeBinaryToWriter(message: KeywordSpottingRequestConfig, writer: jspb.BinaryWriter): void;
-    static deserializeBinary(bytes: Uint8Array): KeywordSpottingRequestConfig;
-    static deserializeBinaryFromReader(message: KeywordSpottingRequestConfig, reader: jspb.BinaryReader): KeywordSpottingRequestConfig;
-}
-
-export namespace KeywordSpottingRequestConfig {
-    export type AsObject = {
-        keywordList: Array<string>,
-        threshold: number,
-    }
-}
-
-export class KeywordSpottingRequestAudio extends jspb.Message { 
-    clearDataList(): void;
-    getDataList(): Array<Uint8Array | string>;
-    getDataList_asU8(): Array<Uint8Array>;
-    getDataList_asB64(): Array<string>;
-    setDataList(value: Array<Uint8Array | string>): KeywordSpottingRequestAudio;
-    addData(value: Uint8Array | string, index?: number): Uint8Array | string;
-    getSpeakerId(): string;
-    setSpeakerId(value: string): KeywordSpottingRequestAudio;
-
-    serializeBinary(): Uint8Array;
-    toObject(includeInstance?: boolean): KeywordSpottingRequestAudio.AsObject;
-    static toObject(includeInstance: boolean, msg: KeywordSpottingRequestAudio): KeywordSpottingRequestAudio.AsObject;
-    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
-    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-    static serializeBinaryToWriter(message: KeywordSpottingRequestAudio, writer: jspb.BinaryWriter): void;
-    static deserializeBinary(bytes: Uint8Array): KeywordSpottingRequestAudio;
-    static deserializeBinaryFromReader(message: KeywordSpottingRequestAudio, reader: jspb.BinaryReader): KeywordSpottingRequestAudio;
-}
-
-export namespace KeywordSpottingRequestAudio {
-    export type AsObject = {
-        dataList: Array<Uint8Array | string>,
-        speakerId: string,
-    }
-}
-
 export class KeywordSpottingRequest extends jspb.Message { 
 
     hasConfig(): boolean;
     clearConfig(): void;
-    getConfig(): KeywordSpottingRequestConfig | undefined;
-    setConfig(value?: KeywordSpottingRequestConfig): KeywordSpottingRequest;
+    getConfig(): KeywordSpottingConfigRequest | undefined;
+    setConfig(value?: KeywordSpottingConfigRequest): KeywordSpottingRequest;
 
     hasAudio(): boolean;
     clearAudio(): void;
-    getAudio(): KeywordSpottingRequestAudio | undefined;
-    setAudio(value?: KeywordSpottingRequestAudio): KeywordSpottingRequest;
+    getAudio(): KeywordSpottingAudioRequest | undefined;
+    setAudio(value?: KeywordSpottingAudioRequest): KeywordSpottingRequest;
     getIsFinal(): boolean;
     setIsFinal(value: boolean): KeywordSpottingRequest;
 
@@ -372,8 +320,8 @@ export class KeywordSpottingRequest extends jspb.Message {
 
 export namespace KeywordSpottingRequest {
     export type AsObject = {
-        config?: KeywordSpottingRequestConfig.AsObject,
-        audio?: KeywordSpottingRequestAudio.AsObject,
+        config?: KeywordSpottingConfigRequest.AsObject,
+        audio?: KeywordSpottingAudioRequest.AsObject,
         isFinal: boolean,
     }
 
@@ -383,6 +331,58 @@ export namespace KeywordSpottingRequest {
         AUDIO = 2,
     }
 
+}
+
+export class KeywordSpottingConfigRequest extends jspb.Message { 
+    clearKeywordList(): void;
+    getKeywordList(): Array<string>;
+    setKeywordList(value: Array<string>): KeywordSpottingConfigRequest;
+    addKeyword(value: string, index?: number): string;
+    getThreshold(): number;
+    setThreshold(value: number): KeywordSpottingConfigRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): KeywordSpottingConfigRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: KeywordSpottingConfigRequest): KeywordSpottingConfigRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: KeywordSpottingConfigRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): KeywordSpottingConfigRequest;
+    static deserializeBinaryFromReader(message: KeywordSpottingConfigRequest, reader: jspb.BinaryReader): KeywordSpottingConfigRequest;
+}
+
+export namespace KeywordSpottingConfigRequest {
+    export type AsObject = {
+        keywordList: Array<string>,
+        threshold: number,
+    }
+}
+
+export class KeywordSpottingAudioRequest extends jspb.Message { 
+    clearDataList(): void;
+    getDataList(): Array<Uint8Array | string>;
+    getDataList_asU8(): Array<Uint8Array>;
+    getDataList_asB64(): Array<string>;
+    setDataList(value: Array<Uint8Array | string>): KeywordSpottingAudioRequest;
+    addData(value: Uint8Array | string, index?: number): Uint8Array | string;
+    getSpeakerId(): string;
+    setSpeakerId(value: string): KeywordSpottingAudioRequest;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): KeywordSpottingAudioRequest.AsObject;
+    static toObject(includeInstance: boolean, msg: KeywordSpottingAudioRequest): KeywordSpottingAudioRequest.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: KeywordSpottingAudioRequest, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): KeywordSpottingAudioRequest;
+    static deserializeBinaryFromReader(message: KeywordSpottingAudioRequest, reader: jspb.BinaryReader): KeywordSpottingAudioRequest;
+}
+
+export namespace KeywordSpottingAudioRequest {
+    export type AsObject = {
+        dataList: Array<Uint8Array | string>,
+        speakerId: string,
+    }
 }
 
 export class KeywordSpottingFound extends jspb.Message { 

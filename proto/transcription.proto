@@ -8,18 +8,18 @@ service Transcription {
 
 message TranscriptionRequest {
 	oneof request_oneof {
-		TranscriptionRequestConfig config = 1;
-		TranscriptionRequestAudio audio = 2;
+		TranscriptionConfigRequest config = 1;
+		TranscriptionAudioRequest audio = 2;
 		TranscriptionCloseRequest close = 3;
 	}
 }
-message TranscriptionRequestConfig {
+message TranscriptionConfigRequest {
 	string prompt = 1;
-	KeywordSpottingRequestConfig kws_config = 2;
+	KeywordSpottingConfigRequest kws_config = 2;
 	bool return_opus = 3;
 	bool return_words = 4;
 }
-message TranscriptionRequestAudio {	
+message TranscriptionAudioRequest {	
 	repeated bytes data = 1;
 	string speaker_id = 2;
 	bool force_flush = 3;
@@ -63,23 +63,24 @@ message TranscriptionCloseResponse {
 }
 
 
-message KeywordSpottingRequestConfig {
+message KeywordSpottingRequest {
+	oneof request_oneof {
+		KeywordSpottingConfigRequest config = 1;
+		KeywordSpottingAudioRequest audio = 2;
+	}
+	bool is_final = 3;
+}
+
+message KeywordSpottingConfigRequest {
 	repeated string keyword = 1;
 	float threshold = 2;
 }
 
-message KeywordSpottingRequestAudio {
+message KeywordSpottingAudioRequest {
 	repeated bytes data = 1;
 	string speaker_id = 2;
 }
 
-message KeywordSpottingRequest {
-	oneof request_oneof {
-		KeywordSpottingRequestConfig config = 1;
-		KeywordSpottingRequestAudio audio = 2;
-	}
-	bool is_final = 3;
-}
 
 message KeywordSpottingFound {
 	string id = 1;

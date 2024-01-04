@@ -3,7 +3,7 @@ import * as grpc from "@grpc/grpc-js";
 import "reflect-metadata";
 import { TranscriptionClient } from "./grpc/transcription_grpc_pb";
 import { OpusEncoder } from "@discordjs/opus";
-import { DiscordOpusPacketList, DiscordOpusPacket, KeywordSpottingRequest, KeywordSpottingRequestConfig, KeywordSpottingRequestAudio, KeywordSpottingResponse } from "./grpc/transcription_pb";
+import { DiscordOpusPacketList, DiscordOpusPacket, KeywordSpottingRequest, KeywordSpottingConfigRequest, KeywordSpottingAudioRequest, KeywordSpottingResponse } from "./grpc/transcription_pb";
 import fs from "node:fs";
 import { once } from "events";
 
@@ -45,7 +45,7 @@ function generatePackets(filename: string,repeat?: number): Array<Uint8Array>{
 async function setKeyword() : Promise<void>{
     const keywords=["アルト","あると","サムゲタン","？","まちがえた"]
     const req=new KeywordSpottingRequest()
-    const config = new KeywordSpottingRequestConfig()
+    const config = new KeywordSpottingConfigRequest()
     config.setKeywordList(keywords)
     req.setConfig(config)
     api_stream.write(req)
@@ -66,7 +66,7 @@ async function main(){
     for(let i in packets){
         const packet=packets[i]
         const req=new KeywordSpottingRequest()
-        const audio = new KeywordSpottingRequestAudio()
+        const audio = new KeywordSpottingAudioRequest()
         audio.addData(packet)
         audio.setSpeakerId("test")
         req.setAudio(audio)
