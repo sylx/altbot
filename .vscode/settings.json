@@ -1,5 +1,5 @@
 {
-    "python.analysis.extraPaths": ["MoeGoe","${workspaceFolder}/ai-service/Style_Bert_VITS2"],
+    "python.analysis.extraPaths": ["${workspaceFolder}","MoeGoe","${workspaceFolder}/ai-service/Style_Bert_VITS2"],
     "python.defaultInterpreterPath": "${workspaceFolder}/ai-service/venv/bin/python",
     "jupyter.debugJustMyCode": false,
 }

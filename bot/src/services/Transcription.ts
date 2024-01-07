@@ -10,7 +10,7 @@ import {
     TranscriptionEventResponse,
     TranscriptionRequest,TranscriptionResponse
 } from "../../grpc/transcription_pb"
-import { AudioReceiveStream, EndBehaviorType } from "@discordjs/voice"
+import { AudioReceiveStream, EndBehaviorType, SpeakingMap } from "@discordjs/voice"
 import { EventEmitter } from "events"
 import { IGuildDependent, PromiseAllDynamic, guildScoped } from "@utils/functions"
 import { VoiceChat } from "./VoiceChat"
@@ -119,15 +119,30 @@ export class Transcription implements IGuildDependent{
         try {
             let audio_request : TranscriptionAudioRequest | null=null
             let is_closed=false
+            const flush=(force?: boolean)=>{
+                if(audio_request === null){
+                    audio_request = new TranscriptionAudioRequest()
+                }
+                const req=new TranscriptionRequest()
+                if(force){
+                    audio_request.setForceFlush(true)
+                }
+                req.setAudio(audio_request)
+                api_stream.write(req)
+                audio_request=null
+            }
+            this.voiceChat.getConnection()?.receiver.speaking.on("end", (userId) => {
+                if(userId === user_id){
+                    console.log("speaking end -> flush",audio_request?.getDataList().length)
+                    flush(true)
+                }
+            })
+    
             stream.stream.on("end",()=>{
                 console.log("opus stream end")
                 //flush
-                if(audio_request !== null){
-                    const req=new TranscriptionRequest()
-                    audio_request.setForceFlush(true)
-                    req.setAudio(audio_request)
-                    api_stream.write(req)
-                    audio_request=null
+                if(audio_request !== null){                    
+                    flush(true)
                 }
                 is_closed=true
             })
@@ -140,11 +155,7 @@ export class Transcription implements IGuildDependent{
                 }
                 audio_request.addData(packet)
                 if(audio_request.getDataList().length >= CHUNK_SIZE){
-                    //flush
-                    const req=new TranscriptionRequest()
-                    req.setAudio(audio_request)
-                    api_stream.write(req)
-                    audio_request=null
+                    flush()
                 }
             }
         }catch(e: any){

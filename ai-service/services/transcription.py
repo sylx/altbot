@@ -19,6 +19,8 @@ import functools
 
 import torch
 
+import grpc
+
 DISCORD_OPUS_PACKETS_SAMPLE_RATE = 48000
 
 # about 20msec frame
@@ -147,8 +149,8 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
 
         response=TranscriptionResponse(event=event_response)
         return response
-
-    async def Transcription(self, request_iterator, context):
+    
+    async def Transcription(self, request_iterator, context : grpc.aio.ServicerContext):
 
         chunk_frames = 100 # 2000msec
         stride_frames = 50 # 1000msec
@@ -158,8 +160,6 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         stride_time = {}
         frame_time=None
         kw_threshold = 0.5
-
-        model = self.getTranscribeModel()
         keyword_spotting = None
         prompt = ""
         return_opus = False
@@ -168,7 +168,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         futures={}
         event_buffer=[]
 
-        def flush(speaker_id,is_final=False):
+        def flush(speaker_id,is_final=False):            
             if frame_buffer.get(speaker_id) is None or frame_buffer[speaker_id].getLength() == 0:
                 return
             # 別スレッドで解析するための準備
@@ -177,7 +177,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
             if len(futures[speaker_id]) > 0:
                 # すでに待機中または実行中のスレッドがあるので新たに投入しない
                 return
-            
+            model = self.getTranscribeModel()            
             kw_prompt=""                    
             if keyword_spotting is not None:
                 result=keyword_spotting(frame_buffer[speaker_id].getAudio())
@@ -222,6 +222,19 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
             future.add_done_callback(functools.partial(self.onFutreDone,futures=futures,speaker_id=speaker_id))                    
             futures[speaker_id].append(future)
 
+        is_pump_alive = True
+        async def event_pump():
+            while is_pump_alive:
+                if len(event_buffer) > 0:
+                    for event in event_buffer:
+                        await context.write(event)
+                        print(f"Transcription: event sent. {event}")
+                    event_buffer.clear()
+                await asyncio.sleep(0.1)
+
+        event_pump_task = asyncio.create_task(event_pump())
+
+        self.last_words={}
         async for request in request_iterator:
             if request.HasField("config"):
                 # config
@@ -267,13 +280,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
                 # 最後のframe_bufferをflushする
                 for speaker_id in frame_buffer.keys():
                     flush(speaker_id,is_final=True)
-                break
-
-            #tick event
-            if len(event_buffer) > 0:
-                for event in event_buffer:
-                    yield event
-                event_buffer.clear()
+                break            
             
         print("Transcription: request is over.")
 
@@ -282,12 +289,9 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         for future in wait_for_futures:
             if future.done() is False:
                 await future
-                #tick event
-                if len(event_buffer) > 0:
-                    for event in event_buffer:
-                        yield event
-                    event_buffer.clear()
         # closeResponseを返しておく
+        is_pump_alive = False
+        await event_pump_task
         yield TranscriptionResponse(close=TranscriptionCloseResponse(success=True))
         print("Transcription: close")
 
@@ -382,7 +386,7 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
         if len(segments) > 0:
             all_words = [w for s in segments for w in s.words]
             # stride分が除外されたword配列
-            words = [w for w in all_words if w.end >= (stride_time - 0.02) and w.probability > 0.01] # stride_timeより前のwordは除外するが、多少の誤差は許容する（多く入るようにする
+            words = [w for w in all_words if w.start >= stride_time and w.probability > 0.01] # stride_timeより前のwordは除外するが、またいでいるwordは残す
             probability = 0.0
             if len(words) > 0:
                 if words[-1].probability < 0.2:
@@ -391,10 +395,13 @@ class Transcription(transcription_pb2_grpc.TranscriptionServicer):
 
                 if self.last_words.get(speaker_id) is not None:
                     # 前回結果の最後のwordsを先頭から除外していく(3単語から開始して、1単語ずつ減らしていく)
+                    print(f"last_words: {''.join([w.word for w in self.last_words[speaker_id]])}")
+                    print(f"words: {''.join([w.word for w in words])}")
                     stride_words = self.last_words[speaker_id][-min(3,len(words)):]
                     while len(stride_words) > 0:
                         substr_words=''.join([w.word for w in words[:len(stride_words)]])
                         substr_stride_words=''.join([w.word for w in stride_words])
+                        print(f"stride_words: {substr_stride_words} words: {substr_words}")                                                
                         if substr_words == substr_stride_words:
                             words = words[len(stride_words):]
                             break

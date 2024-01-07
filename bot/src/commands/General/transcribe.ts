@@ -140,15 +140,14 @@ export default class TranscribeCommand {
 			TranscriptionEmbed(interaction,keyword,event_log,abortController)
 		})
 		emitter.on("transcription",async (evt: TranscriptionEvent)=>{
-			
 			event_log.push(evt)
 			if(event_log.length > 5)
 				event_log.shift()
-			TranscriptionEmbed(interaction,keyword,event_log,abortController)			
+			await TranscriptionEmbed(interaction,keyword,event_log,abortController)			
 		})
 		try{
 			await transcription.start(prompt,keyword,channel_members,emitter,abortController)
-			TranscriptionEmbed(interaction,keyword,event_log)
+			await TranscriptionEmbed(interaction,keyword,event_log)
 			simpleSuccessEmbed(
 				interaction,
 				`終了しました`
@@ -162,36 +161,7 @@ export default class TranscribeCommand {
 			console.error(e)
 		}
 		await voiceChat.leave()
-	}	
-
-	@Slash({
-		description: "音声パケットリストを出力します（デバッグ用)",
-		name: 'dump'
-	})
-	@Guard(
-		Disabled
-	)
-	async dump(
-		interaction: CommandInteraction,
-		client: Client,
-		{ localize }: InteractionData
-	){
-		const voiceChat = await resolveDependency(VoiceChat)
-		const transcription = await resolveDependency(Transcription)
-
-		const buffer=await transcription.getPacketDump(
-			voiceChat.getConnection() as VoiceConnection,
-			interaction.member as GuildMember
-		)
-		console.log("dump",buffer.length,buffer.subarray(0,10))
-		const attachment = new AttachmentBuilder(buffer)
-		attachment.setName(`dump-${interaction.user.username}-${Date.now()}.bin`)		
-		interaction.followUp({
-			files: [attachment],
-			content: "ダンプしました"
-		})
 	}
-
 }
 
 
